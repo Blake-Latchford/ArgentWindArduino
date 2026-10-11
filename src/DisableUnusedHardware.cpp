@@ -13,9 +13,19 @@ void DisableUnusedHardware::begin() {
   power_adc_disable();
   power_spi_disable();
   power_timer0_disable();  // so millis() and delay() don't work; the 1Hz tick is Timer1
+
+  // The other timers and the UART differ between chips.
+#if defined(PRR)
   power_timer2_disable();
 #ifndef WEATHER_DEBUG
   power_usart0_disable();
+#endif
+#elif defined(PRR1)
+  power_timer3_disable();
+  PRR1 |= _BV(4);  // PRTIM4: avr-libc has no name or macro for it
+#ifndef WEATHER_DEBUG
+  power_usart1_disable();
+#endif
 #endif
 
   // Disable the USB hardware if present.
