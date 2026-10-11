@@ -18,6 +18,16 @@ void DisableUnusedHardware::begin() {
   power_usart0_disable();
 #endif
 
+  // Disable the USB hardware if present.
+#if defined(UHWCON)
+  UDIEN = 0;
+  UDCON |= _BV(DETACH);
+  USB_CONTROL = _BV(FRZCLK);
+  PLLCSR = 0;
+  UHWCON &= ~_BV(UVREGE);
+  power_usb_disable();
+#endif
+
   // Unused pins: inputs with pull-ups so they don't float.
   // Skip SDA/SCL in case it would set the master I2C bus to 5V.
   for (uint8_t pin = 2; pin < NUM_DIGITAL_PINS; pin++) {

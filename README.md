@@ -13,6 +13,7 @@ Wiring, parts and cabling are in [docs/hardware.md](docs/hardware.md).
 |---|---|
 | `src/main.cpp` | Brings up the hardware; once a second, feeds the readings to `WeatherStation` and updates the served registers |
 | `src/Board.h` | Pin map (the same on every board), and the LEDs and debug port for each chip |
+| `src/NoCoreUsb.h` | Leaves the Arduino core's USB stack out of the 32U4 builds |
 | `src/ClockPrescale.cpp` | Watchdog off; measures the crystal and prescales it to 2MHz, before `main()` |
 | `src/DisableUnusedHardware.*` | Unused peripherals and pins off |
 | `src/OneHzSleep.*` | 1Hz Timer1 interrupt; idle sleep between seconds |
@@ -39,11 +40,11 @@ There's one firmware per chip. The environments differ only in how they upload:
 |---|---|---|
 | `promini` | Pro Mini | 3.3V FTDI adapter. Set `upload_speed` to the baud rate your Optiboot build uses |
 | `uno` | Uno R3, RedBoard Qwiic | USB |
-| `promicro` | Pro Micro 3.3V and 5V, Qwiic Pro Micro | USB. Doesn't build yet (see [docs/board-support-todo.md](docs/board-support-todo.md)) |
+| `promicro` | Pro Micro 3.3V and 5V, Qwiic Pro Micro | USB. Double-tap reset, then upload within 8 seconds (see [Programming](docs/hardware.md#programming)) |
 
 ```sh
 pio test -e native              # unit tests on the host
-pio run                         # build every environment that builds
+pio run                         # build every environment
 pio run -e uno -t upload        # build and flash one board
 ```
 
