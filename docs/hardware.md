@@ -10,7 +10,7 @@ It can be built on any of the boards below.
 | **Arduino Pro Mini 3.3V/8MHz** | ATmega328P, 8MHz | 3.3V | Direct | RAK 3.3V into VCC | **Yes.** The low-power reference build |
 | Arduino Pro Micro 3.3V/8MHz | ATmega32U4, 8MHz | 3.3V | Direct | RAK 3.3V into VCC | Yes, with the power LED removed |
 | Arduino Pro Micro 5V/16MHz | ATmega32U4, 16MHz | 5V | External level shifter | Own 5V supply | Marginal |
-| SparkFun Qwiic Pro Micro USB-C | ATmega32U4, 16MHz | 5V | Qwiic port, no level shifter (see [notes](#sparkfun-qwiic-pro-micro-usb-c)) | Own 5V supply | Marginal |
+| SparkFun Qwiic Pro Micro USB-C | ATmega32U4, 16MHz | 3.3V, with its voltage jumper changed (see [notes](#sparkfun-qwiic-pro-micro-usb-c)) | Qwiic port, direct | Own supply (USB or RAW) | Marginal |
 | SparkFun RedBoard Qwiic | ATmega328P, 16MHz | 5V | Qwiic port, level shifted on the board | Own supply (USB or barrel jack) | No |
 | Arduino Uno R3 | ATmega328P, 16MHz | 5V | External level shifter | Own supply (USB or barrel jack) | No |
 
@@ -19,11 +19,10 @@ It can be built on any of the boards below.
 - **Field use:** the firmware sleeps between interrupts, but it can't turn off what else is on the
   board. The Uno and RedBoard keep a USB interface chip, regulators and a power LED running, which
   draw milliamps however the firmware sleeps. Use them for bench work or mains/USB-powered installs.
-  The 5V Pro Micros sit in between: no separate USB chip, but a regulator and power LED, and they need
-  a 5V supply of their own.
-- **Don't use the 3.3V jumpers** on the RedBoard Qwiic or Qwiic Pro Micro. Both keep their 16MHz
-  crystal, which is beyond the chips' rating at 3.3V. The firmware drops to 2MHz, but the bootloader
-  and startup run at the full 16MHz first.
+  The 5V Pro Micro and the Qwiic Pro Micro sit in between: no separate USB chip, but a regulator and
+  power LED, and they need a supply of their own.
+- **Voltage jumpers:** leave the RedBoard Qwiic's at 5V; its Qwiic port is already level shifted. Set
+  the Qwiic Pro Micro's to 3.3V, so its I2C matches the RAK's (see its notes).
 
 ## Board notes
 
@@ -47,14 +46,21 @@ It can be built on any of the boards below.
 
 ### SparkFun Qwiic Pro Micro USB-C
 
-- ATmega32U4 at **5V/16MHz**, with an AP2112 3.3V regulator (6V maximum input on RAW).
+- ATmega32U4 with a 16MHz crystal, and an AP2112 3.3V regulator (6V maximum input on RAW).
+- **Set it to 3.3V.** It ships at 5V. On the back, cut the voltage jumper's trace and bridge the center
+  and right pads. The board then runs at 3.3V from its regulator, powered from USB or RAW.
+  - The 16MHz crystal is beyond the 32U4's rating at 3.3V (about 10MHz). The firmware drops to 2MHz
+    before `main()`, so only the bootloader and the start of startup run at 16MHz. That usually works,
+    but it isn't guaranteed: check that the board starts reliably.
+  - Check the brown-out fuse: a level meant for 5V would hold the chip in reset at 3.3V.
+  - SparkFun's guide doesn't say whether the RAK's 3.3V can be fed straight into VCC in this mode,
+    back-feeding the regulator. Check the schematic before doing that; until then, power it from USB
+    or RAW.
 - The Qwiic port is **not level shifted**. SDA and SCL run straight to the 32U4's D2/D3, with 2.2k
-  pull-ups to the 3.3V rail (R5, R7 on the v2.0 schematic). There's no jumper to remove them.
-  - The RAK is safe: the I2C pins only pull low, and the pull-ups go to 3.3V. (The firmware turns off
-    the 32U4's internal pull-ups, which would otherwise pull to 5V.)
-  - The 32U4 is out of spec: at 5V its TWI input-high threshold is 0.7 × 5V = 3.5V, above the 3.3V bus.
-    It usually works on a short bus, but it isn't guaranteed. For a permanent install, either accept
-    that and test it, or remove R5/R7 and fit a proper level shifter.
+  pull-ups to the 3.3V rail (R5, R7 on the v2.0 schematic). At 3.3V that's a direct, in-spec link to
+  the RAK.
+  - At 5V it isn't: the 32U4's input-high threshold is then 0.7 × 5V = 3.5V, above the 3.3V bus, and
+    the internal pull-ups that `Wire.begin()` turns on briefly pull towards 5V.
   - The 2.2k pull-ups are in parallel with any on the RAK side. With 4.7k on the RAK, that's about 1.5k
     combined, still within the I2C 3mA sink limit at 3.3V.
 - The red power LED runs from the 3.3V rail through 1k, about 1.5mA. Remove it for field use.
@@ -84,9 +90,10 @@ It can be built on any of the boards below.
 - The RAK supplies **3.3V only**. Never connect a 5V rail or a 5V signal to it.
 - **3.3V boards** (Pro Mini, Pro Micro 3.3V): feed the RAK's 3.3V into VCC, bypassing the regulator,
   with a common ground.
-- **5V boards** (Uno, RedBoard Qwiic, Pro Micro 5V, Qwiic Pro Micro): power them separately: USB, the
-  barrel jack (Uno and RedBoard, 7–12V), or RAW (Qwiic Pro Micro up to 6V; original Pro Micro up to
-  12V). Connect GND to the RAK's GND.
+- **5V boards** (Uno, RedBoard Qwiic, Pro Micro 5V): power them separately: USB, the barrel jack (Uno
+  and RedBoard, 7–12V), or RAW (Pro Micro up to 12V). Connect GND to the RAK's GND.
+- **Qwiic Pro Micro** (set to 3.3V): power it separately from USB or RAW (up to 6V), with a common
+  ground (see its notes).
 - **Qwiic cables carry 3.3V on the red wire**, from the board's own regulator. If the RAK is powered
   separately, leave the red wire unconnected (cut it, or use a cable without it), so the two 3.3V
   regulators aren't tied together. GND, SDA and SCL still connect.
@@ -134,8 +141,8 @@ D8–D9 at the end. On the Uno and RedBoard, D2–D7 are on the 8-pin digital he
 - Exactly one set of pull-ups on the 3.3V side of the bus, sized for it. If the RAK base already has
   them, add none; otherwise 4.7k from SDA and from SCL to 3.3V. The RedBoard Qwiic's converters and the
   Qwiic Pro Micro's 2.2k resistors count as pull-ups.
-- On 5V boards, the 3.3V side is the RAK's: either a level shifter between them (Uno, Pro Micro 5V),
-  the RedBoard's onboard converters, or the Qwiic Pro Micro's direct connection (see its notes).
+- On 5V boards, the 3.3V side is the RAK's: either a level shifter between them (Uno, Pro Micro 5V) or
+  the RedBoard's onboard converters.
 - The firmware turns off the internal pull-ups that `Wire.begin()` enables. To keep them on instead (a
   short bus with no external pull-ups, on a 3.3V board only), build with
   `-DWEATHER_I2C_EXTERNAL_PULLUPS=0` in `platformio.ini`. Never do that on a 5V board wired straight to

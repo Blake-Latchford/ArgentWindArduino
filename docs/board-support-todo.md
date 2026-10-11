@@ -3,22 +3,7 @@
 Goal: build the firmware for every board in [hardware.md](hardware.md#supported-boards) from one source
 tree: Pro Mini, Uno R3, RedBoard Qwiic, Pro Micro (3.3V/8MHz and 5V/16MHz) and Qwiic Pro Micro.
 
-## 1. Remaining changes in `src/`
-
-Keep the existing file layout: setup first, then periodic code, then ISRs. Chip differences (power
-registers, ADC channels) stay in the driver that uses them, under `#ifdef` on the register or macro.
-
-- [ ] **`IICServer.cpp`**: `Wire.begin()` turns the internal pull-ups on before we turn them off. On a
-  5V board wired straight to a 3.3V bus (Qwiic Pro Micro), that briefly pulls the bus towards 5V
-  through ~30k. Harmless in practice, but check whether the TWI can be enabled without it.
-
-## 2. Decisions
-
-- [ ] **Qwiic Pro Micro I2C levels:** accept the out-of-spec direct Qwiic connection, or document
-  removing R5/R7 and fitting a level shifter (see
-  [its notes](hardware.md#sparkfun-qwiic-pro-micro-usb-c)).
-
-## 3. Verification, per board
+## 1. Verification, per board
 
 - [ ] Debug build: exactly one line per second, pulses count, `vane_raw` tracks the vane. One line per
   second checks the crystal measurement (`ClockPrescale.cpp`) picked the right divider, at 8MHz and
@@ -34,11 +19,13 @@ registers, ADC channels) stay in the driver that uses them, under `#ifdef` on th
 - [ ] 32U4: after a watchdog reset the bootloader checks a "magic key" in RAM to decide whether to stay
   in the bootloader. The core code that sets the key isn't built any more; confirm that none of the
   firmware's own RAM at the key's address can hold the key's value at a reset.
+- [ ] Qwiic Pro Micro, with its jumper set to 3.3V: starts reliably from power-on and from reset. The
+  bootloader runs at 16MHz, beyond the 32U4's rating at 3.3V.
 - [ ] Brown-out detection: check each board's BOD fuse setting against its supply. Boards use their
   bootloader's fuses unless reflashed.
 - [ ] Sleep current measured on the battery-capable boards (Pro Mini, Pro Micro 3.3V).
 
-## 4. Docs
+## 2. Docs
 
 - [ ] README: the intro, the rest of "How it works", the I2C section and the calibration steps still
   describe only the Pro Mini. Generalize them.
