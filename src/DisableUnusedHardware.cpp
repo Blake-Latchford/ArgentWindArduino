@@ -15,7 +15,7 @@ void DisableUnusedHardware::begin() {
 #endif
 
   // Unused pins: inputs with pull-ups so they don't float. D13 drives the onboard LED, so hold it low.
-  const uint8_t unused_pins[] = {5, 6, 7, 8, 9, 10, 11, 12, A1, A2, A3};
+  const uint8_t unused_pins[] = {7, 8, 9, 10, 11, 12, A1, A2, A3};
   for (uint8_t pin : unused_pins) {
     pinMode(pin, INPUT_PULLUP);
   }

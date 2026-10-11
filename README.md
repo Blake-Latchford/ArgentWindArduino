@@ -70,7 +70,8 @@ Set `upload_speed` in `platformio.ini` to the baud rate your Optiboot build uses
 
 ## I2C register map
 
-The Pro Mini is an I2C slave at address `0x42`, running at 100kHz. To read, write one byte to set the
+The Pro Mini is an I2C slave at address `0x6C` (`0x6E` with a jumper across D5 and D6; see
+[docs/hardware.md](docs/hardware.md#i2c-bus)), running at 100kHz. To read, write one byte to set the
 register pointer, then read. Each read returns bytes from the pointer to the end of the map, all from one
 snapshot, so multi-byte values are never torn. Values are little-endian.
 

@@ -6,7 +6,8 @@
 // byte to set the register pointer, then reads; a read returns bytes from the pointer to the end of the
 // map. The whole map fits in the Wire library's 32-byte buffer, so any read is one consistent snapshot.
 
-#define WEATHER_I2C_DEFAULT_ADDRESS 0x42
+#define WEATHER_I2C_PRIMARY_ADDRESS 0x6C
+#define WEATHER_I2C_SECONDARY_ADDRESS 0x6E  // selected by the address jumper
 #define WEATHER_DEVICE_ID 0x57        // 'W'
 #define WEATHER_MAP_VERSION 3
 

@@ -16,7 +16,7 @@
 #include "WeatherStation.h"
 
 #ifndef WEATHER_I2C_ADDRESS
-#define WEATHER_I2C_ADDRESS WEATHER_I2C_DEFAULT_ADDRESS
+#define WEATHER_I2C_ADDRESS WEATHER_I2C_PRIMARY_ADDRESS
 #endif
 
 static WeatherStation station;

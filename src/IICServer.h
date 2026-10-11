@@ -10,12 +10,15 @@ class IICServer {
  public:
   IICServer() = delete;
 
+  // Joins the bus at `address`, or at WEATHER_I2C_SECONDARY_ADDRESS if the address jumper is fitted.
   static void begin(uint8_t address);
 
   // Replace the served values. Copies with interrupts off, so a read never sees half an update.
   static void update(const WeatherRegisters& registers);
 
  private:
+  static bool addressJumperFitted();
+
   // Wire.onReceive() takes a void (*)(int), so the parameter is int rather than a sized type.
   static void onReceive(int count);
   static void onRequest();
