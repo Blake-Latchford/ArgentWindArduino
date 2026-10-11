@@ -17,7 +17,7 @@ void OneHzSleep::begin() {
   TIMSK1 = _BV(OCIE1A);
 }
 
-uint8_t OneHzSleep::untilNextSecond() {
+uint8_t OneHzSleep::sleepOneSecond() {
   for (;;) {
     // Check with interrupts off so a tick can't slip in between the check and the sleep; sleep_cpu()
     // right after sei() runs before any pending interrupt.

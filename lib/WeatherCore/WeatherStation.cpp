@@ -1,14 +1,13 @@
 #include "WeatherStation.h"
 
-void WeatherStation::addSeconds(uint8_t elapsed_seconds, uint8_t wind_pulses, uint16_t vane_counts,
-                                uint8_t rain_tips) {
-  _uptime_seconds += elapsed_seconds;
+void WeatherStation::add(const WeatherSample& sample) {
+  _uptime_seconds += sample.seconds;
   _sequence++;
-  _wind.addSecond(wind_pulses, vane_counts);
-  _rain.addSecond(rain_tips);
+  _wind.addSecond({sample.wind_pulses, VaneDecoder::decode10bitAdc(sample.vane_10bit_adc)});
+  _rain.addSecond(sample.rain_tips);
 }
 
-WeatherRegisters WeatherStation::registers() const {
+WeatherRegisters WeatherStation::currentRegisters() const {
   WeatherRegisters r;
   r.device_id = WEATHER_DEVICE_ID;
   r.map_version = WEATHER_MAP_VERSION;

@@ -2,7 +2,7 @@
 
 namespace {
 
-// Expected ADC counts per Heading, computed as 1024 * R / (R + 10k) from the nominal datasheet
+// Expected 10-bit ADC counts per Heading, computed as 1024 * R / (R + 10k) from the nominal datasheet
 // resistances. These are placeholders: replace them with counts measured on the installed vane and cable
 // (the debug build prints vane_raw each second; see README.md).
 const uint16_t VANE_COUNTS[HEADING_COUNT] = {
@@ -31,9 +31,9 @@ const uint16_t VANE_SHORT_COUNTS = 34;   // 344 ohms
 
 }  // namespace
 
-uint16_t VaneDecoder::expectedCounts(Heading heading) { return VANE_COUNTS[(uint8_t)heading]; }
+uint16_t VaneDecoder::expected10bitCounts(Heading heading) { return VANE_COUNTS[(uint8_t)heading]; }
 
-Heading VaneDecoder::decode(uint16_t counts) {
+Heading VaneDecoder::decode10bitAdc(uint16_t counts) {
   if (counts > VANE_OPEN_COUNTS || counts < VANE_SHORT_COUNTS) {
     return Heading::Invalid;
   }

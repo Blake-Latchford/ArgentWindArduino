@@ -10,8 +10,8 @@ class IICServer {
  public:
   IICServer() = delete;
 
-  // Joins the bus at `address`, or at WEATHER_I2C_SECONDARY_ADDRESS if the address jumper is fitted.
-  static void begin(uint8_t address);
+  // Joins the bus at the primary address, or at the secondary address if the address jumper is fitted.
+  static void begin();
 
   // Replace the served values. Copies with interrupts off, so a read never sees half an update.
   static void update(const WeatherRegisters& registers);

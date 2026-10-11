@@ -16,15 +16,7 @@
 #include "Watchdog.h"
 #include "WeatherStation.h"
 
-#ifndef WEATHER_I2C_ADDRESS
-#define WEATHER_I2C_ADDRESS WEATHER_I2C_PRIMARY_ADDRESS
-#endif
-
 static WeatherStation station;
-
-#ifdef WEATHER_DEBUG
-static void printDebug(const ReedSwitches::Counts& counts, uint16_t vane_counts, const WeatherRegisters& r);
-#endif
 
 void setup() {
   station.setWatchdogReset(Watchdog::causedLastReset());
@@ -37,43 +29,41 @@ void setup() {
   DisableUnusedHardware::begin();
   ReedSwitches::begin();
   VaneAdc::begin();
-  IICServer::begin(WEATHER_I2C_ADDRESS);
-  IICServer::update(station.registers());
+  IICServer::begin();
+  IICServer::update(station.currentRegisters());
   OneHzSleep::begin();
   Watchdog::begin();
 }
 
 void loop() {
-  uint8_t seconds = OneHzSleep::untilNextSecond();
+  const uint8_t actual_elapsed_seconds = OneHzSleep::sleepOneSecond();
   Watchdog::rearm();
 
-  ReedSwitches::Counts counts = ReedSwitches::take();
-  uint16_t vane_counts = VaneAdc::sample();
-  station.addSeconds(seconds, counts.wind_pulses, vane_counts, counts.rain_tips);
+  const ReedSwitches::Counts counts = ReedSwitches::take();
+  const WeatherSample sample = {
+    actual_elapsed_seconds,
+    counts.wind_pulses,
+    counts.rain_tips,
+    VaneAdc::sample()
+  };
+  station.add(sample);
 
-  WeatherRegisters registers = station.registers();
+  WeatherRegisters registers = station.currentRegisters();
   IICServer::update(registers);
 
 #ifdef WEATHER_DEBUG
-  printDebug(counts, vane_counts, registers);
-#endif
-}
-
-#ifdef WEATHER_DEBUG
-// The raw vane reading is printed for calibrating the vane table (see README.md).
-static void printDebug(const ReedSwitches::Counts& counts, uint16_t vane_counts, const WeatherRegisters& r) {
   BOARD_DEBUG_SERIAL.print(F("pulses="));
-  BOARD_DEBUG_SERIAL.print(counts.wind_pulses);
+  BOARD_DEBUG_SERIAL.print(sample.wind_pulses);
   BOARD_DEBUG_SERIAL.print(F(" vane_raw="));
-  BOARD_DEBUG_SERIAL.print(vane_counts);
+  BOARD_DEBUG_SERIAL.print(sample.vane_10bit_adc);
   BOARD_DEBUG_SERIAL.print(F(" avg="));
-  BOARD_DEBUG_SERIAL.print(r.wind_avg);
+  BOARD_DEBUG_SERIAL.print(registers.wind_avg);
   BOARD_DEBUG_SERIAL.print(F(" gust="));
-  BOARD_DEBUG_SERIAL.print(r.wind_gust);
+  BOARD_DEBUG_SERIAL.print(registers.wind_gust);
   BOARD_DEBUG_SERIAL.print(F(" dir="));
-  BOARD_DEBUG_SERIAL.print(r.wind_direction);
+  BOARD_DEBUG_SERIAL.print(registers.wind_direction);
   BOARD_DEBUG_SERIAL.print(F(" rain_1h="));
-  BOARD_DEBUG_SERIAL.println(r.rain_last_hour);
+  BOARD_DEBUG_SERIAL.println(registers.rain_last_hour);
   BOARD_DEBUG_SERIAL.flush();
-}
 #endif
+}

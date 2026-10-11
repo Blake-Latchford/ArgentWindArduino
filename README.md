@@ -1,15 +1,16 @@
 # ArgentWindArduino
 
-Firmware for Arduino weather interface boards to read Argent Data wind and rain sensor assembly.
+Firmware for a 3.3V Arduino Pro Micro weather interface board to read Argent Data wind and rain sensor assembly.
 Delivers standard compliant processed results as an I2C slave.
-The primary expected master device is expected to be a MeshCore sensor.
+The primary expected master device is a a MeshCore sensor.
 
 This project has been built with the help of AI.
 
 ## Project Layout
 
-`src/` is specific to the ATmega32U4 (Pro Micro).
-`lib/WeatherCore` has no hardware dependencies and builds on any target.
+`src/` is specific to the Pro Micro.
+`lib/WeatherCore` has no hardware dependencies and builds on any target. A port to another board feeds
+it one `WeatherSample` a second; see [lib/WeatherCore/docs.md](lib/WeatherCore/docs.md).
 
 ## Build, test, flash
 
@@ -58,12 +59,11 @@ values:
 ## Supported boards
 
 - The [SparkFun Qwiic Pro Micro USB-C](https://www.sparkfun.com/sparkfun-qwiic-pro-micro-usb-c-atmega32u4.html) (DEV-15795) is the primary supported hardware: its Qwiic port connects to the RAK without soldering the I2C wiring.
-- The 3.3V/8MHz Pro Micro is also supported, by the same build. It needs the I2C wires soldered to D2/D3.
+- The 3.3V/8MHz Pro Micro is also supported, by the same build.
 - [Arduino Uno Q](https://docs.arduino.cc/hardware/uno-q/) support is planned for [Gusty](https://github.com/vielmetti/gusty)
 
 The 5V/16MHz Pro Micro runs the same build, but needs an I2C level shifter from 5V to 3.3V and a
-separate 5V power supply. Other boards, such as the Arduino Uno, would need their own port of `src/`
-(PRs welcome).
+separate 5V power supply.
 
 ## Board notes
 
@@ -152,8 +152,8 @@ D7 spare, then the reed switches on D8–D9 at the end.
   to 5V.
 - The slave address is 0x6C. A 2-pin jumper shunt across D5 and D6 changes it to 0x6E, for a second
   unit or a clash with another device on the bus. The firmware reads the jumper only at reset. To use
-  a different address with the jumper off, add `-DWEATHER_I2C_ADDRESS=0x..` to `build_flags` in
-  `platformio.ini`.
+  different addresses, add `-DWEATHER_I2C_PRIMARY_ADDRESS=0x..` (jumper off) or
+  `-DWEATHER_I2C_SECONDARY_ADDRESS=0x..` (jumper on) to `build_flags` in `platformio.ini`.
 - Run the bus at 100kHz, not 400kHz. The firmware runs the CPU at 2MHz, and the TWI slave needs a CPU
   clock of at least 16x SCL.
 
@@ -289,3 +289,15 @@ shorting RST to GND, and wire I2C to D2/D3 with pull-ups in step 9.
    bus (see [I2C bus](#i2c-bus)). On the RAK, write `0x00` to address `0x6C` and read 16 bytes; the
    first byte should be `0x57`, and `sequence` (byte 3) should go up by one each second. Fit a shunt
    across D5 and D6, reset the board, and check that it now answers at `0x6E` instead.
+
+
+
+
+- **Clock and sleep:** before `main()`, the chip times its crystal against the watchdog oscillator and
+  divides it to 2MHz (8MHz by 4, 16MHz by 8), so `F_CPU` is 2MHz throughout. Between interrupts it sits
+  in idle sleep. Timer0 is off, so `millis()` and `delay()` don't work. SPI, Timers 3 and 4, USB, the
+  comparator and (outside debug builds) the USART are off too. The ADC is powered only while the vane is
+  being sampled.
+- **Time base:** Timer1 in CTC mode interrupts at 1Hz.
+- **Hang recovery:** the watchdog runs in interrupt-then-reset mode with a 2s timeout. The main loop
+  re-arms it on each tick. If the watchdog does reset the chip, the next boot sets a status bit.

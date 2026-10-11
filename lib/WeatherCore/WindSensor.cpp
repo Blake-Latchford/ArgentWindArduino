@@ -20,8 +20,7 @@ uint16_t hundredthsMetersPerSecond(uint32_t pulses, uint32_t seconds) {
 
 }  // namespace
 
-void WindSensor::addSecond(uint8_t pulses, uint16_t vane_counts) {
-  Second newest = {pulses, VaneDecoder::decode(vane_counts)};
+void WindSensor::addSecond(Second newest) {
   _vane_fault = newest.heading == Heading::Invalid;
 
   if (windowFull()) {

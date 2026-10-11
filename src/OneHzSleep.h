@@ -9,7 +9,6 @@ class OneHzSleep {
 
   static void begin();
 
-  // Idle-sleep until at least one second has elapsed, waking for other interrupts (reed switches, I2C)
-  // as they come. Returns the number of seconds since the last call: 1, unless the caller fell behind.
-  static uint8_t untilNextSecond();
+  // Returns the actual number of seconds since the last call
+  static uint8_t sleepOneSecond();
 };

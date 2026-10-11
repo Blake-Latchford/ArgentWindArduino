@@ -1,10 +1,25 @@
-- **Clock and sleep:** before `main()`, the chip times its crystal against the watchdog oscillator and
-  divides it to 2MHz (8MHz by 4, 16MHz by 8), so `F_CPU` is 2MHz throughout. Between interrupts it sits
-  in idle sleep. Timer0 is off, so `millis()` and `delay()` don't work. SPI, Timers 3 and 4, USB, the comparator and (outside debug builds) the USART are off too. The ADC is powered
-  only while the vane is being sampled.
-- **Time base:** Timer1 in CTC mode interrupts at 1Hz.
-- **Hang recovery:** the watchdog runs in interrupt-then-reset mode with a 2s timeout. The main loop
-  re-arms it on each tick. If the watchdog does reset the chip, the next boot sets a status bit.
+# WeatherCore
+
+Turns one second of raw sensor readings at a time into the reported values. It has no hardware
+dependencies, and builds and tests on the host (`pio test -e native`).
+
+## What a board provides
+
+Once a second, from the main loop, a board calls `WeatherStation::add()` with a `WeatherSample`
+(`WeatherStation.h`), then reads `WeatherStation::currentRegisters()` and sends them on, over I2C or any
+other transport. The sample holds:
+
+- **Seconds** since the previous sample, from an accurate clock. Wind speed is pulses per second, so a
+  timing error is a speed error.
+- **Anemometer and rain gauge closures** since the previous sample. Count each switch's debounced
+  falling edges in an interrupt with a `PulseCounter` (`PulseCounter.h`), and `take()` from the main loop.
+- **One 10-bit vane reading**, 0-1023, so set a higher-resolution ADC to 10 bits. The vane is the lower
+  leg of a divider under 10k, driven from the ADC's reference voltage (`VaneDecoder.h`).
+
+`WeatherStation` isn't interrupt-safe: only `PulseCounter::increment()` runs in an interrupt.
+
+## Reported values
+
 - **Wind speed:** 1 pulse/s = 2.4 km/h = 2/3 m/s. The mean covers the full 600 s window. Until the
   window has filled (the first 10 minutes after power-up), the wind-valid status bit is clear, speed and
   gust read 0, and direction is invalid.

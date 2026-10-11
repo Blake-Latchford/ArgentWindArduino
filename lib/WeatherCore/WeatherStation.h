@@ -3,23 +3,36 @@
 #include <stdint.h>
 
 #include "RainGauge.h"
+#include "VaneDecoder.h"
 #include "WeatherRegisters.h"
 #include "WindSensor.h"
 
-// The wind sensor and rain gauge together, fed once per second from the hardware, producing the register
-// map the RAK reads.
+// Everything the board measures in one second. The board fills one in each second and passes it to
+// WeatherStation::add(). Count the reed switches with a PulseCounter each.
+struct WeatherSample {
+  // Seconds since the previous sample, timed from an accurate clock: wind speed is pulses per second, so
+  // timing error is speed error. 1, unless the board fell behind.
+  uint8_t seconds;
+  uint8_t wind_pulses;   // anemometer closures since the previous sample
+  uint8_t rain_tips;     // rain gauge closures since the previous sample
+  uint16_t vane_10bit_adc;   // one 10-bit vane reading (VaneDecoder), taken at any point in the second
+};
+
+// The wind sensor and rain gauge together, fed once per second from the hardware, producing the
+// WeatherRegisters values. It is not interrupt-safe: count pulses in interrupts with PulseCounter, and call
+// add() and currentRegisters() from the main loop.
 class WeatherStation {
 public:
-  // Flag that the last reset was the watchdog, for the status register.
+  // Flag that the last reset was the watchdog, for the status register. Boards without a watchdog leave it
+  // unset.
   void setWatchdogReset(bool watchdog_reset) { _watchdog_reset = watchdog_reset; }
 
-  // Record `elapsed_seconds` of time (1 unless the caller fell behind) with the readings taken over it:
-  // anemometer pulses, the vane's ADC reading, and rain bucket tips. A backlog lands in one second of data
-  // so no pulses or tips are lost.
-  void addSeconds(uint8_t elapsed_seconds, uint8_t wind_pulses, uint16_t vane_counts, uint8_t rain_tips);
+  // Record one sample. A backlog (seconds > 1) advances uptime by all of it but lands in one second of
+  // wind and rain data, so no pulses or tips are lost.
+  void add(const WeatherSample& sample);
 
-  // The current values, as served over I2C.
-  WeatherRegisters registers() const;
+  // The current values, laid out as the register map.
+  WeatherRegisters currentRegisters() const;
 
   const WindSensor& wind() const { return _wind; }
   const RainGauge& rain() const { return _rain; }

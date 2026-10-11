@@ -13,11 +13,19 @@
 #define WEATHER_I2C_EXTERNAL_PULLUPS 1
 #endif
 
+// The address jumper selects between these at reset (platformio.ini).
+#ifndef WEATHER_I2C_PRIMARY_ADDRESS
+#define WEATHER_I2C_PRIMARY_ADDRESS 0x6C
+#endif
+#ifndef WEATHER_I2C_SECONDARY_ADDRESS
+#define WEATHER_I2C_SECONDARY_ADDRESS 0x6E
+#endif
+
 WeatherRegisters IICServer::served;
 volatile uint8_t IICServer::pointer;
 
-void IICServer::begin(uint8_t address) {
-  Wire.begin(addressJumperFitted() ? WEATHER_I2C_SECONDARY_ADDRESS : address);
+void IICServer::begin() {
+  Wire.begin(addressJumperFitted() ? WEATHER_I2C_SECONDARY_ADDRESS : WEATHER_I2C_PRIMARY_ADDRESS);
 #if WEATHER_I2C_EXTERNAL_PULLUPS
   // Wire.begin() turns on the internal pull-ups on SDA/SCL; the bus has its own. On an input, writing
   // LOW turns the pull-up off.

@@ -5,7 +5,7 @@
 #include "VaneDecoder.h"
 
 // The Argent Data anemometer and wind vane, which share one cable. Takes one sample per second (the
-// anemometer's pulse count and the vane's ADC reading) and keeps them in ring buffers over the reporting
+// anemometer's pulse count and the vane's decoded heading) and keeps them in ring buffers over the reporting
 // window. Gives out wind speed and direction. Speed and direction live in one sensor because the
 // direction average is weighted by speed.
 //
@@ -20,8 +20,14 @@
 
 class WindSensor {
 public:
-  // Record one second: `pulses` anemometer closures during it, and the vane's 10-bit ADC reading.
-  void addSecond(uint8_t pulses, uint16_t vane_counts);
+  // One second of readings.
+  struct Second {
+    uint8_t pulses;    // anemometer closures during the second
+    Heading heading;   // the vane's heading (see VaneDecoder), or Heading::Invalid for a vane fault
+  };
+
+  // Record one second.
+  void addSecond(Second second);
 
   // Speed and direction are only calculated over a full window. Until then they read 0 and invalid.
   bool windowFull() const { return _filled == WIND_WINDOW_SECONDS; }
@@ -41,11 +47,6 @@ public:
   bool vaneFault() const { return _vane_fault; }
 
 private:
-  struct Second {
-    uint8_t pulses;
-    Heading heading;   // or Heading::Invalid
-  };
-
   Second _seconds[WIND_WINDOW_SECONDS];
   uint16_t _head = 0;     // next slot to write
   uint16_t _filled = 0;

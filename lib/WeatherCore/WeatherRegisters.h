@@ -2,12 +2,9 @@
 
 #include <stdint.h>
 
-// I2C register map served to the RAK. All multi-byte values are little-endian. The master writes one
-// byte to set the register pointer, then reads; a read returns bytes from the pointer to the end of the
-// map. The whole map fits in the Wire library's 32-byte buffer, so any read is one consistent snapshot.
+// The reported values, as one packed 16-byte block: the I2C register map
+// All multi-byte values are little-endian
 
-#define WEATHER_I2C_PRIMARY_ADDRESS 0x6C
-#define WEATHER_I2C_SECONDARY_ADDRESS 0x6E  // selected by the address jumper
 #define WEATHER_DEVICE_ID 0x57        // 'W'
 #define WEATHER_MAP_VERSION 1
 
