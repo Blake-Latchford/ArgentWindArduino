@@ -33,16 +33,22 @@ Wiring, parts and cabling are in [docs/hardware.md](docs/hardware.md).
 
 This project uses [PlatformIO](https://platformio.org/).
 
+There's one firmware per chip. The environments differ only in how they upload:
+
+| Env | Boards | Upload |
+|---|---|---|
+| `promini` | Pro Mini | 3.3V FTDI adapter. Set `upload_speed` to the baud rate your Optiboot build uses |
+| `uno` | Uno R3, RedBoard Qwiic | USB |
+| `promicro` | Pro Micro 3.3V and 5V, Qwiic Pro Micro | USB. Doesn't build yet (see [docs/board-support-todo.md](docs/board-support-todo.md)) |
+
 ```sh
 pio test -e native              # unit tests on the host
-pio run -e promini              # build
-pio run -e promini -t upload    # flash over a 3.3V FTDI adapter
+pio run                         # build every environment that builds
+pio run -e uno -t upload        # build and flash one board
 ```
 
-`promini_debug` prints each second's readings over serial at 250000 baud (`pio device monitor -e
-promini_debug`).
-
-Set `upload_speed` in `platformio.ini` to the baud rate your Optiboot build uses.
+Each environment has a `_debug` variant, such as `promini_debug`, that prints each second's readings on
+the debug serial port at 250000 baud (`pio device monitor -e promini_debug`).
 
 ## How it works
 

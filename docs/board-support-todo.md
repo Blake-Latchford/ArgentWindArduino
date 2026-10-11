@@ -3,34 +3,11 @@
 Goal: build the firmware for every board in [hardware.md](hardware.md#supported-boards) from one source
 tree: Pro Mini, Uno R3, RedBoard Qwiic, Pro Micro (3.3V/8MHz and 5V/16MHz) and Qwiic Pro Micro.
 
-`src/Board.h` is the pin map, and it's the same on every board. Its only branch is the LEDs and debug
-port: the Uno's arrangement, unless the chip is the Pro Micro's 32U4. The one difference between boards
-with the same chip, the crystal, is measured at startup (`ClockPrescale.cpp`), so there's one build per
-chip and no board setting. `lib/WeatherCore` has no hardware dependencies and needs no changes.
-
-Where things stand:
-- **ATmega328P** (Pro Mini, Uno, RedBoard Qwiic): the `promini` build is byte-for-byte the same
-  firmware a Uno build produces, so it should run on all three. Only the upload settings differ.
-- **ATmega32U4** (Pro Micros): every file in `src/` compiles. The build still fails in the Arduino
-  core's USB code (section 2), and the power-reduction calls are still the 328P's (section 3).
-
 ## 1. PlatformIO environments
 
-The firmware is the same for every board with the same chip, so environments are only needed where
-the upload settings differ.
-
-- [ ] Add environments, each with `board_build.f_cpu = 2000000L`:
-
-  | Env | `board` | Boards | Upload |
-  |---|---|---|---|
-  | `promini` | `pro8MHzatmega328` | Pro Mini | Existing: FTDI, Optiboot at 57600 |
-  | `uno` | `uno` | Uno, RedBoard Qwiic | USB, Optiboot at 115200. Check the RedBoard's bootloader speed matches |
-  | `promicro` | `sparkfun_promicro16` | Both Pro Micros, Qwiic Pro Micro | USB, double reset (section 2). The `board` only picks the upload protocol here; the crystal is measured |
-
-- [ ] A `_debug` variant of each, as `promini_debug` does now. Shared flags go in a common `[env]` or
-  `[avr]` section.
-- [ ] Build every environment in CI (or a `pio run` with all of them listed in `default_envs`), so a
-  change for one chip can't silently break the other.
+- [ ] Add `promicro` and `promicro_debug` to `default_envs` once they link (section 2).
+- [ ] Check that the RedBoard Qwiic's bootloader runs at 115200, as the Uno's does (the `uno`
+  environment's upload speed).
 
 ## 2. USB on the 32U4 (blocking: decide first)
 
@@ -54,13 +31,15 @@ divider from `F_CPU` and has `#error "Clock rate of F_CPU not supported"` for an
 
 ## 3. Remaining changes in `src/`
 
+Keep the existing file layout: setup first, then periodic code, then ISRs. Chip differences (power
+registers, ADC channels) stay in the driver that uses them, under `#ifdef` on the register or macro.
+
 - [ ] **`ClockPrescale.cpp`**: test the crystal measurement on hardware, at 8MHz and 16MHz. It assumes
   the CPU starts at the crystal frequency: the `CKDIV8` fuse unprogrammed, and the bootloader leaving
   `CLKPR` at divide-by-1. That holds for the stock bootloaders as far as I know; confirm it, especially
   for the Pro Micro's.
-- [ ] **`DisableUnusedHardware.cpp`**: per-chip power-reduction calls. Pins and LEDs are already
-  handled for both chips. `power_timer2_disable()` and `power_usart0_disable()` compile for the 32U4 in
-  this avr-libc, but they set reserved `PRR0` bits. What the 32U4 needs is Timer3
+- [ ] **`DisableUnusedHardware.cpp`**: per-chip power-reduction calls. `power_timer2_disable()` and
+  `power_usart0_disable()` compile for the 32U4 in this avr-libc, but they set reserved `PRR0` bits. What the 32U4 needs is Timer3
   (`power_timer3_disable()`), Timer4 (no macro: set `PRTIM4` in `PRR1`), USART1 outside debug builds
   (`power_usart1_disable()`) and USB (section 2).
 - [ ] **`IICServer.cpp`**: `Wire.begin()` turns the internal pull-ups on before we turn them off. On a
@@ -71,9 +50,6 @@ divider from `F_CPU` and has `#error "Clock rate of F_CPU not supported"` for an
   watchdog-reset status bit. It also checks a "magic key" in RAM to decide whether to stay in the
   bootloader. Confirm the firmware can't leave that key set by accident.
 - [ ] **`OneHzSleep.cpp`**: Timer1 is the same on both chips; check only.
-- [ ] Keep the existing file layout: setup first, then periodic code, then ISRs. Chip differences
-  (power registers, ADC channels) stay in the driver that uses them, under `#ifdef` on the register or
-  macro.
 
 ## 4. Decisions
 
@@ -96,7 +72,6 @@ divider from `F_CPU` and has `#error "Clock rate of F_CPU not supported"` for an
 
 ## 6. Docs
 
-- [ ] README: the intro and the rest of "How it works" still describe only the Pro Mini. Generalize,
-  and list the build environments. (The layout table and the clock description are already updated.)
-- [ ] hardware.md: remove the firmware-status note once the boards build, and add the debug-serial
-  details for the Pro Micros.
+- [ ] README: the intro, the rest of "How it works", the I2C section and the calibration steps still
+  describe only the Pro Mini. Generalize them.
+- [ ] README and hardware.md: remove the "doesn't build yet" notes for the Pro Micro once it builds.

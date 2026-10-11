@@ -3,8 +3,8 @@
 The interface board reads the wind and rain sensors and serves the results to a RAK WisBlock over I2C.
 It can be built on any of the boards below.
 
-> **Firmware status:** only the Pro Mini build (`promini`) exists today. The other boards need the
-> changes listed in [board-support-todo.md](board-support-todo.md) before they will build.
+> **Firmware status:** the Pro Mini, Uno and RedBoard Qwiic build (`promini`, `uno`). The Pro Micros
+> need the changes listed in [board-support-todo.md](board-support-todo.md) before they will build.
 
 ## Supported boards
 
