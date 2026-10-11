@@ -2,8 +2,13 @@
 
 #include <Arduino.h>
 
-// Pin-change interrupts on one port, so one ISR covers both.
-// PORTB is the only such port on the 32U4, and D2/D3 are its I2C.
+// Pro Micro pin map: the SparkFun Qwiic Pro Micro and the 3.3V Pro Micro share the ATmega32U4 and its
+// pinout. I2C is fixed by the chip on D2 (SDA) and D3 (SCL), also on the Qwiic port.
+#if !defined(__AVR_ATmega32U4__)
+#error "This firmware targets the ATmega32U4 (Pro Micro)"
+#endif
+
+// Pin-change interrupts on one port, so one ISR covers both. PORTB is the only such port on the 32U4.
 #define BOARD_ANEMOMETER_PIN 8
 #define BOARD_RAIN_PIN 9
 
@@ -14,11 +19,6 @@
 #define BOARD_ADDRESS_JUMPER_SENSE_PIN 5
 #define BOARD_ADDRESS_JUMPER_GROUND_PIN 6
 
-#if defined(__AVR_ATmega32U4__)
 // The RX/TX LEDs are lit by a low pin. Serial is USB here, so debug goes to the UART.
 #define BOARD_LEDS {LED_BUILTIN_RX, HIGH}, {LED_BUILTIN_TX, HIGH}
 #define BOARD_DEBUG_SERIAL Serial1
-#else
-#define BOARD_LEDS {LED_BUILTIN, LOW}
-#define BOARD_DEBUG_SERIAL Serial
-#endif

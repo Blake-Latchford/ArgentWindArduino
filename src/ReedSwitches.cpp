@@ -5,8 +5,8 @@
 
 #include "Board.h"
 
-// Both switches are on PORTB (see Board.h). PORTB is pin-change group 0 on both chips, and its PCINT
-// bits match its port bits, so a pin's PCMSK bit is also its PINB bit.
+// Both switches are on PORTB (see Board.h). PORTB is pin-change group 0, and its PCINT bits match its
+// port bits, so a pin's PCMSK bit is also its PINB bit.
 static_assert(digitalPinToPCICRbit(BOARD_ANEMOMETER_PIN) == 0, "anemometer pin must be on PORTB");
 static_assert(digitalPinToPCICRbit(BOARD_RAIN_PIN) == 0, "rain pin must be on PORTB");
 #define ANEMOMETER_BIT _BV(digitalPinToPCMSKbit(BOARD_ANEMOMETER_PIN))

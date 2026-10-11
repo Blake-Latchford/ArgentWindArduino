@@ -1,4 +1,4 @@
-// Pro Mini (3.3V, ATmega328P) weather interface: reads the Argent Data wind and rain sensors and serves
+// Pro Micro (3.3V, ATmega32U4) weather interface: reads the Argent Data wind and rain sensors and serves
 // wind speed, direction and rainfall to a RAK WisBlock as an I2C slave. See README.md for wiring and the
 // register map.
 //
