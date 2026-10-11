@@ -7,12 +7,12 @@ void setUp() {}
 void tearDown() {}
 
 // Vane ADC readings for each heading, and for an open circuit.
-#define NORTH VaneDecoder::expectedCounts(0)
-#define NNE VaneDecoder::expectedCounts(1)
-#define EAST VaneDecoder::expectedCounts(4)
-#define SOUTH VaneDecoder::expectedCounts(8)
-#define WEST VaneDecoder::expectedCounts(12)
-#define NNW VaneDecoder::expectedCounts(15)
+#define NORTH VaneDecoder::expectedCounts(Heading::North)
+#define NNE VaneDecoder::expectedCounts(Heading::NorthNortheast)
+#define EAST VaneDecoder::expectedCounts(Heading::East)
+#define SOUTH VaneDecoder::expectedCounts(Heading::South)
+#define WEST VaneDecoder::expectedCounts(Heading::West)
+#define NNW VaneDecoder::expectedCounts(Heading::NorthNorthwest)
 #define OPEN 1023
 
 static void test_empty_window() {

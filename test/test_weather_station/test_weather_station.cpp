@@ -18,7 +18,7 @@ static void test_initial_registers() {
 
 static void test_registers_carry_sensor_values() {
   WeatherStation s;
-  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) s.addSeconds(1, 3, VaneDecoder::expectedCounts(4), i < 2 ? 1 : 0);
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) s.addSeconds(1, 3, VaneDecoder::expectedCounts(Heading::East), i < 2 ? 1 : 0);
   WeatherRegisters r = s.registers();
   TEST_ASSERT_EQUAL_UINT8((uint8_t)WIND_WINDOW_SECONDS, r.sequence);
   TEST_ASSERT_EQUAL_UINT32(WIND_WINDOW_SECONDS, r.uptime_seconds);
@@ -31,7 +31,7 @@ static void test_registers_carry_sensor_values() {
 
 static void test_rain_after_an_hour() {
   WeatherStation s;
-  for (int i = 0; i < RAIN_HOUR_MINUTES * 60; i++) s.addSeconds(1, 3, VaneDecoder::expectedCounts(4), i < 2 ? 1 : 0);
+  for (int i = 0; i < RAIN_HOUR_MINUTES * 60; i++) s.addSeconds(1, 3, VaneDecoder::expectedCounts(Heading::East), i < 2 ? 1 : 0);
   WeatherRegisters r = s.registers();
   TEST_ASSERT_EQUAL_UINT16(56, r.rain_last_hour);
   TEST_ASSERT_EQUAL_HEX8(WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_DIRECTION_VALID | WEATHER_STATUS_RAIN_VALID,

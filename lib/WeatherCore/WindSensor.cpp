@@ -2,15 +2,13 @@
 
 #include <math.h>
 
-#include "VaneDecoder.h"
-
 namespace {
 
-// sin and cos of each heading index (22.5 degree steps clockwise from north), scaled by 1000.
-const int16_t HEADING_SIN[VANE_POSITION_COUNT] = {
+// sin and cos of each Heading, scaled by 1000.
+const int16_t HEADING_SIN[HEADING_COUNT] = {
   0, 383, 707, 924, 1000, 924, 707, 383, 0, -383, -707, -924, -1000, -924, -707, -383,
 };
-const int16_t HEADING_COS[VANE_POSITION_COUNT] = {
+const int16_t HEADING_COS[HEADING_COUNT] = {
   1000, 924, 707, 383, 0, -383, -707, -924, -1000, -924, -707, -383, 0, 383, 707, 924,
 };
 
@@ -24,7 +22,7 @@ uint16_t hundredthsMetersPerSecond(uint32_t pulses, uint32_t seconds) {
 
 void WindSensor::addSecond(uint8_t pulses, uint16_t vane_counts) {
   Second newest = {pulses, VaneDecoder::decode(vane_counts)};
-  _vane_fault = newest.vane_index == VANE_INVALID;
+  _vane_fault = newest.heading == Heading::Invalid;
 
   if (windowFull()) {
     // The window is full, so the slot at _head holds the oldest second, which drops out.
@@ -42,9 +40,10 @@ void WindSensor::addSecond(uint8_t pulses, uint16_t vane_counts) {
 // `sign` is 1 to add `second` to the running sums, -1 to remove it.
 void WindSensor::changeSums(const Second& second, int8_t sign) {
   _pulse_sum += sign * (int32_t)second.pulses;
-  if (second.vane_index < VANE_POSITION_COUNT) {
-    _weighted_sin += sign * (int32_t)second.pulses * HEADING_SIN[second.vane_index];
-    _weighted_cos += sign * (int32_t)second.pulses * HEADING_COS[second.vane_index];
+  if (second.heading != Heading::Invalid) {
+    uint8_t i = (uint8_t)second.heading;
+    _weighted_sin += sign * (int32_t)second.pulses * HEADING_SIN[i];
+    _weighted_cos += sign * (int32_t)second.pulses * HEADING_COS[i];
   }
 }
 

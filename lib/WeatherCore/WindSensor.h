@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "VaneDecoder.h"
+
 // The Argent Data anemometer and wind vane, which share one cable. Takes one sample per second (the
 // anemometer's pulse count and the vane's ADC reading) and keeps them in ring buffers over the reporting
 // window. Gives out wind speed and direction. Speed and direction live in one sensor because the
@@ -41,7 +43,7 @@ public:
 private:
   struct Second {
     uint8_t pulses;
-    uint8_t vane_index;   // heading index, or VANE_INVALID
+    Heading heading;   // or Heading::Invalid
   };
 
   Second _seconds[WIND_WINDOW_SECONDS];

@@ -5,26 +5,28 @@
 void setUp() {}
 void tearDown() {}
 
+#define TEST_ASSERT_EQUAL_HEADING(expected, actual) TEST_ASSERT_EQUAL_UINT8((uint8_t)(expected), (uint8_t)(actual))
+
 static void test_exact_counts_decode_to_their_heading() {
-  for (uint8_t i = 0; i < VANE_POSITION_COUNT; i++) {
-    TEST_ASSERT_EQUAL_UINT8(i, VaneDecoder::decode(VaneDecoder::expectedCounts(i)));
+  for (uint8_t i = 0; i < HEADING_COUNT; i++) {
+    TEST_ASSERT_EQUAL_HEADING(i, VaneDecoder::decode(VaneDecoder::expectedCounts((Heading)i)));
   }
 }
 
 static void test_nearby_counts_decode_to_nearest_heading() {
-  TEST_ASSERT_EQUAL_UINT8(4, VaneDecoder::decode(95));   // 90 deg is 93, 67.5 deg is 84
-  TEST_ASSERT_EQUAL_UINT8(3, VaneDecoder::decode(86));
-  TEST_ASSERT_EQUAL_UINT8(12, VaneDecoder::decode(950));
+  TEST_ASSERT_EQUAL_HEADING(Heading::East, VaneDecoder::decode(95));   // East is 93, EastNortheast is 84
+  TEST_ASSERT_EQUAL_HEADING(Heading::EastNortheast, VaneDecoder::decode(86));
+  TEST_ASSERT_EQUAL_HEADING(Heading::West, VaneDecoder::decode(950));
 }
 
 static void test_open_circuit_is_invalid() {
-  TEST_ASSERT_EQUAL_UINT8(VANE_INVALID, VaneDecoder::decode(1023));
-  TEST_ASSERT_EQUAL_UINT8(VANE_INVALID, VaneDecoder::decode(990));
+  TEST_ASSERT_EQUAL_HEADING(Heading::Invalid, VaneDecoder::decode(1023));
+  TEST_ASSERT_EQUAL_HEADING(Heading::Invalid, VaneDecoder::decode(990));
 }
 
 static void test_short_is_invalid() {
-  TEST_ASSERT_EQUAL_UINT8(VANE_INVALID, VaneDecoder::decode(0));
-  TEST_ASSERT_EQUAL_UINT8(VANE_INVALID, VaneDecoder::decode(20));
+  TEST_ASSERT_EQUAL_HEADING(Heading::Invalid, VaneDecoder::decode(0));
+  TEST_ASSERT_EQUAL_HEADING(Heading::Invalid, VaneDecoder::decode(20));
 }
 
 int main() {

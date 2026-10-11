@@ -2,10 +2,10 @@
 
 namespace {
 
-// Expected ADC counts per heading index, computed as 1024 * R / (R + 10k) from the nominal datasheet
+// Expected ADC counts per Heading, computed as 1024 * R / (R + 10k) from the nominal datasheet
 // resistances. These are placeholders: replace them with counts measured on the installed vane and cable
 // (the debug build prints vane_raw each second; see README.md).
-const uint16_t VANE_COUNTS[VANE_POSITION_COUNT] = {
+const uint16_t VANE_COUNTS[HEADING_COUNT] = {
   786,  //   0.0  33k
   406,  //  22.5  6.57k
   461,  //  45.0  8.2k
@@ -31,21 +31,21 @@ const uint16_t VANE_SHORT_COUNTS = 34;   // 344 ohms
 
 }  // namespace
 
-uint16_t VaneDecoder::expectedCounts(uint8_t i) { return VANE_COUNTS[i]; }
+uint16_t VaneDecoder::expectedCounts(Heading heading) { return VANE_COUNTS[(uint8_t)heading]; }
 
-uint8_t VaneDecoder::decode(uint16_t counts) {
+Heading VaneDecoder::decode(uint16_t counts) {
   if (counts > VANE_OPEN_COUNTS || counts < VANE_SHORT_COUNTS) {
-    return VANE_INVALID;
+    return Heading::Invalid;
   }
 
   uint8_t best = 0;
   uint16_t best_distance = 0xFFFF;
-  for (uint8_t i = 0; i < VANE_POSITION_COUNT; i++) {
+  for (uint8_t i = 0; i < HEADING_COUNT; i++) {
     uint16_t distance = counts > VANE_COUNTS[i] ? counts - VANE_COUNTS[i] : VANE_COUNTS[i] - counts;
     if (distance < best_distance) {
       best_distance = distance;
       best = i;
     }
   }
-  return best;
+  return (Heading)best;
 }
