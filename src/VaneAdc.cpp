@@ -4,32 +4,55 @@
 #include <avr/power.h>
 #include <util/delay.h>
 
-#define VANE_DRIVE_PIN 4     // D4, top of the divider
-#define VANE_ADC_CHANNEL 0   // A0, divider midpoint
+#include "Board.h"
+
+static uint8_t channel;
 
 void VaneAdc::begin() {
-  pinMode(VANE_DRIVE_PIN, OUTPUT);
-  digitalWrite(VANE_DRIVE_PIN, LOW);
-  DIDR0 = _BV(ADC0D);   // no digital input buffer on the analog pin
+  pinMode(BOARD_VANE_DRIVE_PIN, OUTPUT);
+  digitalWrite(BOARD_VANE_DRIVE_PIN, LOW);
+  pinMode(BOARD_VANE_ADC_PIN, INPUT);  // a parked pin's pull-up would load the divider
+
+  // The 32U4's analog pins don't map to channels in order.
+#ifndef analogPinToChannel
+#define analogPinToChannel(p) (p)
+#endif
+
+  channel = analogPinToChannel(BOARD_VANE_ADC_PIN - A0);
+
+  // A digital input buffer draws current with its pin held mid-rail.
+#ifdef DIDR2
+  if (channel >= 8) {
+    DIDR2 |= _BV(channel - 8);
+  } else
+#endif
+  {
+    DIDR0 |= _BV(channel);
+  }
 }
 
 uint16_t VaneAdc::sample() {
-  digitalWrite(VANE_DRIVE_PIN, HIGH);
+  digitalWrite(BOARD_VANE_DRIVE_PIN, HIGH);
   power_adc_enable();
-  ADMUX = _BV(REFS0) | VANE_ADC_CHANNEL;   // AVCC reference
-  ADCSRA = _BV(ADEN) | _BV(ADPS2);         // 2MHz / 16 = 125kHz ADC clock
+  // AVCC also feeds the divider, so the reading is ratiometric
+  ADMUX = _BV(REFS0) | (channel & 0x07);
+#ifdef MUX5
+  ADCSRB = (channel & 0x08) ? _BV(MUX5) : 0;
+#endif
+  // Enable the ADC, and set the clock for full resolution.
+  ADCSRA = _BV(ADEN) | _BV(ADPS2);
   _delay_us(50);
 
-  uint16_t counts = 0;
-  for (uint8_t i = 0; i < 2; i++) {  // discard the first conversion after enabling
-    ADCSRA |= _BV(ADSC);
-    while (ADCSRA & _BV(ADSC)) {
-    }
-    counts = ADC;
-  }
+  // Discard the first conversion since its unreliable.
+  ADCSRA |= _BV(ADSC);
+  while (ADCSRA & _BV(ADSC));
+  
+  ADCSRA |= _BV(ADSC);
+  while (ADCSRA & _BV(ADSC));
+  const uint16_t counts = ADC;
 
   ADCSRA = 0;
   power_adc_disable();
-  digitalWrite(VANE_DRIVE_PIN, LOW);
+  digitalWrite(BOARD_VANE_DRIVE_PIN, LOW);
   return counts;
 }

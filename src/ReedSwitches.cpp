@@ -3,36 +3,39 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-// Both switches are on PORTD, so one pin-change vector covers them.
-#define ANEMOMETER_BIT PD2
-#define RAIN_BIT PD3
+#include "Board.h"
+
+// Both switches are on PORTB (see Board.h). PORTB is pin-change group 0 on both chips, and its PCINT
+// bits match its port bits, so a pin's PCMSK bit is also its PINB bit.
+static_assert(digitalPinToPCICRbit(BOARD_ANEMOMETER_PIN) == 0, "anemometer pin must be on PORTB");
+static_assert(digitalPinToPCICRbit(BOARD_RAIN_PIN) == 0, "rain pin must be on PORTB");
+#define ANEMOMETER_BIT _BV(digitalPinToPCMSKbit(BOARD_ANEMOMETER_PIN))
+#define RAIN_BIT _BV(digitalPinToPCMSKbit(BOARD_RAIN_PIN))
 
 // Free-running totals: the ISR only increments them and take() reports the change since its last
 // call, so they may wrap. A single-byte read is atomic on AVR, so take() needs no cli()/sei().
 static volatile uint8_t wind_total;
 static volatile uint8_t rain_total;
-static uint8_t last_port_d;
+static uint8_t last_port_bitmask;
 
 void ReedSwitches::begin() {
   // Inputs with the internal pull-ups off; the external 100k ones draw less while a switch sits closed.
-  // A clear DDRD bit makes the pin an input; on an input, a clear PORTD bit disables its pull-up.
-  DDRD &= ~(_BV(ANEMOMETER_BIT) | _BV(RAIN_BIT));
-  PORTD &= ~(_BV(ANEMOMETER_BIT) | _BV(RAIN_BIT));
+  pinMode(BOARD_ANEMOMETER_PIN, INPUT);
+  pinMode(BOARD_RAIN_PIN, INPUT);
 
   // Seed the ISR's edge detection with the pins' current levels. Left at 0, the first falling edge
   // would look like no change (0 -> 0) and be missed.
-  last_port_d = PIND;
+  last_port_bitmask = PINB;
 
   // Pin-change interrupts fire on any edge, rising or falling; the ISR picks out the falling ones.
-  // PCMSK2 selects which PORTD pins raise PCINT2_vect: PCINT18 is PD2 (anemometer), PCINT19 is PD3
-  // (rain).
-  PCMSK2 = _BV(PCINT18) | _BV(PCINT19);
+  // PCMSK0 selects which PORTB pins raise PCINT0_vect.
+  PCMSK0 = ANEMOMETER_BIT | RAIN_BIT;
   // Clear any change latched while the pins were being set up (writing 1 clears the flag), so the
   // ISR doesn't run once as soon as it's enabled.
-  PCIFR = _BV(PCIF2);
-  // Enable the PCINT2 group (PCINT16-23, i.e. PORTD). Any of these edges also wakes the CPU from
-  // OneHzSleep's idle sleep. Leave the other groups disabled.
-  PCICR |= _BV(PCIE2);
+  PCIFR = _BV(PCIF0);
+  // Enable the PORTB group. Any of these edges also wakes the CPU from OneHzSleep's idle sleep. Leave
+  // the other groups disabled.
+  PCICR |= _BV(PCIE0);
 }
 
 ReedSwitches::Counts ReedSwitches::take() {
@@ -47,17 +50,17 @@ ReedSwitches::Counts ReedSwitches::take() {
   last_rain_total = rain;
   return counts;
 }
-
+  
 // A switch closing pulls its pin to GND, so a pulse is a falling edge.
-ISR(PCINT2_vect) {
-  uint8_t port_d = PIND;
-  uint8_t fell = last_port_d & ~port_d;
-  last_port_d = port_d;
+ISR(PCINT0_vect) {
+  uint8_t port_bitmask = PINB;
+  uint8_t fell = last_port_bitmask & ~port_bitmask;
+  last_port_bitmask = port_bitmask;
 
-  if (fell & _BV(ANEMOMETER_BIT)) {
+  if (fell & ANEMOMETER_BIT) {
     wind_total++;
   }
-  if (fell & _BV(RAIN_BIT)) {
+  if (fell & RAIN_BIT) {
     rain_total++;
   }
 }

@@ -7,6 +7,7 @@
 
 #include <Arduino.h>
 
+#include "Board.h"
 #include "DisableUnusedHardware.h"
 #include "ReedSwitches.h"
 #include "IICServer.h"
@@ -29,8 +30,8 @@ void setup() {
   station.setWatchdogReset(Watchdog::causedLastReset());
 
 #ifdef WEATHER_DEBUG
-  Serial.begin(WEATHER_DEBUG_BAUD);
-  Serial.println(F("weather interface"));
+  BOARD_DEBUG_SERIAL.begin(WEATHER_DEBUG_BAUD);
+  BOARD_DEBUG_SERIAL.println(F("weather interface"));
 #endif
 
   DisableUnusedHardware::begin();
@@ -61,18 +62,18 @@ void loop() {
 #ifdef WEATHER_DEBUG
 // The raw vane reading is printed for calibrating the vane table (see README.md).
 static void printDebug(const ReedSwitches::Counts& counts, uint16_t vane_counts, const WeatherRegisters& r) {
-  Serial.print(F("pulses="));
-  Serial.print(counts.wind_pulses);
-  Serial.print(F(" vane_raw="));
-  Serial.print(vane_counts);
-  Serial.print(F(" avg="));
-  Serial.print(r.wind_avg);
-  Serial.print(F(" gust="));
-  Serial.print(r.wind_gust);
-  Serial.print(F(" dir="));
-  Serial.print(r.wind_direction);
-  Serial.print(F(" rain_1h="));
-  Serial.println(r.rain_last_hour);
-  Serial.flush();
+  BOARD_DEBUG_SERIAL.print(F("pulses="));
+  BOARD_DEBUG_SERIAL.print(counts.wind_pulses);
+  BOARD_DEBUG_SERIAL.print(F(" vane_raw="));
+  BOARD_DEBUG_SERIAL.print(vane_counts);
+  BOARD_DEBUG_SERIAL.print(F(" avg="));
+  BOARD_DEBUG_SERIAL.print(r.wind_avg);
+  BOARD_DEBUG_SERIAL.print(F(" gust="));
+  BOARD_DEBUG_SERIAL.print(r.wind_gust);
+  BOARD_DEBUG_SERIAL.print(F(" dir="));
+  BOARD_DEBUG_SERIAL.print(r.wind_direction);
+  BOARD_DEBUG_SERIAL.print(F(" rain_1h="));
+  BOARD_DEBUG_SERIAL.println(r.rain_last_hour);
+  BOARD_DEBUG_SERIAL.flush();
 }
 #endif

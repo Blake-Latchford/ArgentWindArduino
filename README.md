@@ -12,7 +12,8 @@ Wiring, parts and cabling are in [docs/hardware.md](docs/hardware.md).
 | Path | What |
 |---|---|
 | `src/main.cpp` | Brings up the hardware; once a second, feeds the readings to `WeatherStation` and updates the served registers |
-| `src/ClockPrescale.cpp` | Watchdog off and 8MHz → 2MHz clock prescale, before `main()` |
+| `src/Board.h` | Pin map (the same on every board), and the LEDs and debug port for each chip |
+| `src/ClockPrescale.cpp` | Watchdog off; measures the crystal and prescales it to 2MHz, before `main()` |
 | `src/DisableUnusedHardware.*` | Unused peripherals and pins off |
 | `src/OneHzSleep.*` | 1Hz Timer1 interrupt; idle sleep between seconds |
 | `src/Watchdog.*` | Interrupt-then-reset watchdog |
@@ -45,9 +46,9 @@ Set `upload_speed` in `platformio.ini` to the baud rate your Optiboot build uses
 
 ## How it works
 
-- **Clock and sleep:** the chip divides its 8MHz clock by 4, before `main()`, so `F_CPU` is 2MHz
-  throughout. Between interrupts it sits in idle sleep. Timer0 is off, so `millis()` and `delay()` don't
-  work. SPI, Timer2, the comparator and (outside debug builds) the USART are off too. The ADC is powered
+- **Clock and sleep:** before `main()`, the chip times its crystal against the watchdog oscillator and
+  divides it to 2MHz (8MHz by 4, 16MHz by 8), so `F_CPU` is 2MHz throughout. Between interrupts it sits
+  in idle sleep. Timer0 is off, so `millis()` and `delay()` don't work. SPI, Timer2, the comparator and (outside debug builds) the USART are off too. The ADC is powered
   only while the vane is being sampled.
 - **Time base:** Timer1 in CTC mode interrupts at 1Hz.
 - **Hang recovery:** the watchdog runs in interrupt-then-reset mode with a 2s timeout. The main loop

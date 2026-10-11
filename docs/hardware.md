@@ -44,8 +44,7 @@ It can be built on any of the boards below.
 - The voltage is marked on the back. The **3.3V/8MHz** version wires straight to the RAK's I2C bus and
   can run from the RAK's 3.3V rail into VCC. The **5V/16MHz** version needs a level shifter and its own
   5V supply (see [Power](#power)).
-- I2C is on **D2 (SDA) and D3 (SCL)**, so the reed switches move to D8 and D9 (see
-  [Pin assignments](#pin-assignments)).
+- I2C is on **D2 (SDA) and D3 (SCL)**, not A4/A5.
 - Remove the red power LED for field use.
 - There's no reset button. To reset, short RST to GND.
 
@@ -97,24 +96,41 @@ It can be built on any of the boards below.
 
 ## Pin assignments
 
-| Function | Pro Mini, Uno, RedBoard Qwiic (ATmega328P) | Pro Micro, Qwiic Pro Micro (ATmega32U4) | Notes |
-|---|---|---|---|
-| I2C SDA | A4 (Uno: also the SDA header pin; RedBoard: also Qwiic) | D2 (Qwiic Pro Micro: also Qwiic) | Slave address 0x6C, or 0x6E with the address jumper |
-| I2C SCL | A5 (Uno: also the SCL header pin; RedBoard: also Qwiic) | D3 (Qwiic Pro Micro: also Qwiic) | |
-| Anemometer reed switch | D2 | D8 | Pin-change interrupt, falling edge |
-| Rain gauge reed switch | D3 | D9 | Pin-change interrupt, falling edge |
-| Top of vane divider | D4 | D4 | HIGH only while sampling |
-| Vane divider midpoint | A0 | A0 | ADC input |
-| Address jumper | D5, D6 | D5, D6 | Shunt fitted: 0x6E. Read at reset |
-| Debug serial | D1 (TX), D0 (RX) | D1 (TX), D0 (RX), as `Serial1` | Debug builds only |
-| Power | VCC / 5V | VCC | See [Power](#power) |
-| GND | GND | GND | RAK GND, sensor grounds |
+Every board uses the same pin numbers, except for I2C, which the chip fixes. `src/Board.h` is the
+source of truth; keep this table in step with it.
 
-- On the 32U4, D2/D3 are the I2C pins, and only PORTB has pin-change interrupts. D8 and D9 are PB4 and
-  PB5, so both reed switches share one interrupt vector, as they do on PORTD on the 328P.
+| Function | Pin | Notes |
+|---|---|---|
+| I2C SDA | A4 on the 328P boards (Uno: also the SDA header pin); D2 on the Pro Micros | Also on the Qwiic port where there is one. Slave address 0x6C, or 0x6E with the address jumper |
+| I2C SCL | A5 on the 328P boards (Uno: also the SCL header pin); D3 on the Pro Micros | |
+| Anemometer reed switch | D8 | Pin-change interrupt, falling edge |
+| Rain gauge reed switch | D9 | Pin-change interrupt, falling edge |
+| Top of vane divider | D4 | HIGH only while sampling |
+| Vane divider midpoint | A0 | ADC input |
+| Address jumper | D5, D6 | Shunt fitted: 0x6E. Read at reset |
+| Debug serial | D1 (TX), D0 (RX) | Debug builds only. `Serial1` on the Pro Micros |
+| Power | VCC / 5V | See [Power](#power) |
+| GND | GND | RAK GND, sensor grounds |
+
+Spare: D7 on every board, and D2/D3 on the 328P boards.
+
+**On the header.** The Pro Mini and Pro Micro have the same pin order: one long edge runs TX, RX, two
+pins (RST/GND or GND/GND), then D2–D9; the other runs RAW, GND, RST, VCC, A3–A0, then four more. So
+everything except A0 is on one edge: D4, then the D5–D6 jumper, D7 spare, then the reed switches on
+D8–D9 at the end. On the Uno and RedBoard, D2–D7 are on the 8-pin digital header and D8/D9 start the
+10-pin one.
+
+**Why these pins:**
+- The reed switches need pin-change interrupts on one port. The 32U4 has them only on PORTB, and D8/D9
+  are on PORTB on both chips, so both switches share one interrupt everywhere. (D2/D3 are the 32U4's
+  I2C pins.)
+- The vane drive can be any digital output and the vane input any analog input that isn't I2C. D4 and
+  A0 are on every board.
+- The jumper needs two adjacent free pins: no free pin sits next to a GND on any of these boards, so D6
+  is driven low to act as the jumper's ground while the firmware reads it at reset.
 - On the Uno and RedBoard, D0/D1 also go to the USB-serial chip, so the debug output appears on the USB
-  port. On the Pro Micros, `Serial` is USB; debug output goes to `Serial1` on the TX/RX pins and needs
-  a USB-serial adapter at the board's logic voltage.
+  port. On the Pro Micros, `Serial` is USB; debug output goes to `Serial1` on the TX/RX pins and needs a
+  USB-serial adapter at the board's logic voltage.
 
 ## I2C bus
 
@@ -129,7 +145,8 @@ It can be built on any of the boards below.
   the RAK: the internal pull-ups go to 5V.
 - The slave address is 0x6C. A 2-pin jumper shunt across D5 and D6 changes it to 0x6E, for a second
   unit or a clash with another device on the bus. The firmware reads the jumper only at reset. To use
-  a different address with the jumper off, change `-DWEATHER_I2C_ADDRESS` in `platformio.ini`.
+  a different address with the jumper off, add `-DWEATHER_I2C_ADDRESS=0x..` to `build_flags` in
+  `platformio.ini`.
 - Run the bus at 100kHz, not 400kHz. The firmware runs the CPU at 2MHz on every board, and the TWI
   slave needs a CPU clock of at least 16x SCL.
 
@@ -190,9 +207,8 @@ rated for the board's logic voltage (3.3V or 5V class).
   off to save power, so the automatic reset before an upload won't reach it. Reset twice quickly to
   hold the bootloader for 8 seconds, and upload in that window. (Qwiic Pro Micro: the reset button;
   original Pro Micro: short RST to GND twice.)
-  - Pick the right board version (8MHz or 16MHz). The wrong one makes the board look bricked;
-    recover with the double reset and a correct upload.
-  - The Qwiic Pro Micro is the 16MHz board.
+  - One build serves both Pro Micro versions and the Qwiic Pro Micro: the firmware measures the
+    crystal at startup.
 
 ## Breadboard setup
 
@@ -238,13 +254,13 @@ of an FTDI adapter. On a 5V board, wire the I2C link through its level shifting 
    Expect `weather interface`, then one line per second with `pulses=0`. With nothing on A0 yet,
    `vane_raw` floats and means nothing.
 
-4. **Anemometer input (D2).** Build the reed switch circuit from
-   [Reed switch inputs](#reed-switch-inputs-anemometer-and-rain-identical): 100k from D2 to 3.3V, 22nF
-   from D2 to GND, and 1k from D2 to one side of a pushbutton whose other side goes to GND. Press the
+4. **Anemometer input (D8).** Build the reed switch circuit from
+   [Reed switch inputs](#reed-switch-inputs-anemometer-and-rain-identical): 100k from D8 to 3.3V, 22nF
+   from D8 to GND, and 1k from D8 to one side of a pushbutton whose other side goes to GND. Press the
    button a few times within one second; `pulses` should count the presses, one per press.
 
-5. **Rain input (D3).** Build the same circuit on D3. The debug line has no per-second rain count, so
-   confirm it with a meter or scope instead: D3 sits at 3.3V and drops to near 0V while the button is
+5. **Rain input (D9).** Build the same circuit on D9. The debug line has no per-second rain count, so
+   confirm it with a meter or scope instead: D9 sits at 3.3V and drops to near 0V while the button is
    held. The rain total itself only appears after an hour (see the README's bench checks).
 
 6. **Vane divider (D4, A0).** Connect 10k from D4 to A0. Connect the potentiometer's wiper to A0 and one
@@ -259,8 +275,8 @@ of an FTDI adapter. On a 5V board, wire the I2C link through its level shifting 
    invalid.
 
 8. **Real sensors.** Replace the pushbuttons and pot with the sensors through the RJ11 breakouts, per
-   [Cabling](#cabling): anemometer on the middle pair of its cable to the D2 circuit, vane on the outer
-   pair to A0 and GND, rain gauge on the middle pair of its cable to the D3 circuit. Identify the pairs
+   [Cabling](#cabling): anemometer on the middle pair of its cable to the D8 circuit, vane on the outer
+   pair to A0 and GND, rain gauge on the middle pair of its cable to the D9 circuit. Identify the pairs
    with a meter first. Spin the anemometer and turn the vane, and check the debug output as in steps 4
    and 6. This is also the setup for [calibrating the vane](../README.md#calibrating-the-vane).
 

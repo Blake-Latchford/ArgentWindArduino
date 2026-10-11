@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 
-// Anemometer (D2) and rain gauge (D3) reed switches, counted on falling edges by pin-change interrupt.
-// Each pin has an external 100k pull-up and an RC debounce network.
+// Anemometer and rain gauge reed switches (pins in Board.h), counted on falling edges by pin-change
+// interrupt. Each pin has an external 100k pull-up and an RC debounce network.
 class ReedSwitches {
  public:
   ReedSwitches() = delete;
