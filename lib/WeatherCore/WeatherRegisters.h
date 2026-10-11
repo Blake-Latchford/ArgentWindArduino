@@ -9,7 +9,7 @@
 #define WEATHER_I2C_PRIMARY_ADDRESS 0x6C
 #define WEATHER_I2C_SECONDARY_ADDRESS 0x6E  // selected by the address jumper
 #define WEATHER_DEVICE_ID 0x57        // 'W'
-#define WEATHER_MAP_VERSION 3
+#define WEATHER_MAP_VERSION 1
 
 // STATUS bits
 #define WEATHER_STATUS_WIND_VALID 0x01     // a full wind window is in; until then wind values read 0
