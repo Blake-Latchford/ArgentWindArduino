@@ -32,12 +32,11 @@ void setup() {
 }
 
 void loop() {
-  const uint8_t actual_elapsed_seconds = OneHzSleep::sleepOneSecond();
+  OneHzSleep::sleepOneSecond();
   Watchdog::rearm();
 
   const ReedSwitches::Counts counts = ReedSwitches::take();
   const WeatherSample sample = {
-    actual_elapsed_seconds,
     counts.wind_pulses,
     counts.rain_tips,
     VaneAdc::sample()

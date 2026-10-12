@@ -11,7 +11,7 @@
 class RainGauge {
 public:
   // Record one second's bucket tips.
-  void addSecond(uint8_t tips);
+  void addSample(uint8_t tips);
 
   // Rain is only reported over a full hour. Until then it reads 0.
   bool hourFull() const { return _filled_minutes == RAIN_HOUR_MINUTES; }

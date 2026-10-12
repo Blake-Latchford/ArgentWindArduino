@@ -12,6 +12,7 @@ class OneHzSleep {
 
   static void begin();
 
-  // Returns the actual number of seconds since the last call
-  static uint8_t sleepOneSecond();
+  // Returns at once if a tick is already pending
+  // Deadline oveerruns are ignored
+  static void sleepOneSecond();
 };

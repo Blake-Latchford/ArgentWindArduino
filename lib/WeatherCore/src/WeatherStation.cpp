@@ -10,10 +10,10 @@ static uint32_t uptime_seconds = 0;
 static uint8_t sequence = 0;
 
 void WeatherStation::add(const WeatherSample& sample) {
-  uptime_seconds += sample.seconds;
+  uptime_seconds++;
   sequence++;
-  wind.addSecond({sample.wind_pulses, VaneDecoder::decode10bitAdc(sample.vane_10bit_adc)});
-  rain.addSecond(sample.rain_tips);
+  wind.addSample({sample.wind_pulses, VaneDecoder::decode10bitAdc(sample.vane_10bit_adc)});
+  rain.addSample(sample.rain_tips);
 }
 
 WeatherRegisters WeatherStation::currentRegisters() {
@@ -24,15 +24,15 @@ WeatherRegisters WeatherStation::currentRegisters() {
 
   r.status = 0;
   if (wind.windowFull()) r.status |= WEATHER_STATUS_WIND_VALID;
-  if (wind.vaneFault()) r.status |= WEATHER_STATUS_VANE_FAULT;
   if (rain.hourFull()) r.status |= WEATHER_STATUS_RAIN_VALID;
 
   r.wind_avg = wind.averageSpeed();
   r.wind_gust = wind.gustSpeed();
   
-  uint16_t unaligned_direction_buffer = 0;
-  if (wind.direction(unaligned_direction_buffer)) r.status |= WEATHER_STATUS_DIRECTION_VALID;
-  r.wind_direction = unaligned_direction_buffer;
+  const WindSensor::Direction direction = wind.direction();
+  if (direction.valid) r.status |= WEATHER_STATUS_DIRECTION_VALID;
+  if (direction.variable) r.status |= WEATHER_STATUS_DIRECTION_VARIABLE;
+  r.wind_direction = direction.angle;
 
   r.rain_last_hour = rain.lastHourRain();
   r.uptime_seconds = uptime_seconds;

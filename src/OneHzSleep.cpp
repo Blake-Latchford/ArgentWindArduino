@@ -17,16 +17,15 @@ void OneHzSleep::begin() {
   TIMSK1 = _BV(OCIE1A);
 }
 
-uint8_t OneHzSleep::sleepOneSecond() {
+void OneHzSleep::sleepOneSecond() {
   for (;;) {
     // Check with interrupts off so a tick can't slip in between the check and the sleep; sleep_cpu()
     // right after sei() runs before any pending interrupt.
     cli();
-    uint8_t ticks = pending_ticks;
-    if (ticks > 0) {
+    if (pending_ticks > 0) {
       pending_ticks = 0;
       sei();
-      return ticks;
+      return;
     }
     sleep_enable();
     sei();

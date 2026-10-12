@@ -8,7 +8,7 @@ void tearDown() {}
 #define HOUR_SECONDS (RAIN_HOUR_MINUTES * 60)
 
 static void addSeconds(RainGauge& r, int seconds, uint8_t tips_each) {
-  for (int i = 0; i < seconds; i++) r.addSecond(tips_each);
+  for (int i = 0; i < seconds; i++) r.addSample(tips_each);
 }
 
 static void test_starts_dry() {
@@ -19,12 +19,12 @@ static void test_starts_dry() {
 
 static void test_nothing_until_the_hour_is_full() {
   RainGauge r;
-  r.addSecond(1);
+  r.addSample(1);
   addSeconds(r, HOUR_SECONDS - 2, 0);
   TEST_ASSERT_FALSE(r.hourFull());
   TEST_ASSERT_EQUAL_UINT16(0, r.lastHourRain());
 
-  r.addSecond(0);
+  r.addSample(0);
   TEST_ASSERT_TRUE(r.hourFull());
   TEST_ASSERT_EQUAL_UINT16(28, r.lastHourRain());   // one tip is 0.2794 mm
 }
@@ -41,11 +41,11 @@ static void test_hour_does_not_accumulate_rounding() {
 // hour 60 minutes after it completed.
 static void test_hour_is_sixty_complete_minutes() {
   RainGauge r;
-  r.addSecond(10);                          // minute 0
+  r.addSample(10);                          // minute 0
   addSeconds(r, HOUR_SECONDS - 1, 0);
   TEST_ASSERT_EQUAL_UINT16(279, r.lastHourRain());
 
-  r.addSecond(1);                           // minute 60, under way
+  r.addSample(1);                           // minute 60, under way
   TEST_ASSERT_EQUAL_UINT16(279, r.lastHourRain());
 
   addSeconds(r, 59, 0);                     // minute 60 completes; minute 0 drops out

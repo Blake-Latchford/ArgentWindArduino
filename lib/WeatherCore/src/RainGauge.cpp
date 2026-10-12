@@ -4,7 +4,7 @@
 // keeps rounding error from accumulating.
 static uint32_t hundredthsMillimeters(uint32_t tips) { return (tips * 2794 + 50) / 100; }
 
-void RainGauge::addSecond(uint8_t tips) {
+void RainGauge::addSample(uint8_t tips) {
   // 255 tips in a minute is about 71 mm, over twice the world record, so only a faulty switch gets here.
   // Saturate rather than wrap.
   if (tips > 0xFF - _current_tips) {

@@ -51,7 +51,7 @@ values:
 ## Bench checks
 
 - With the debug build, spin the anemometer and confirm that `pulses` follows it.
-- After the first hour (status bit 3 set), tip the rain bucket N times. Within two minutes, confirm that
+- After the first hour (status bit 2 set), tip the rain bucket N times. Within two minutes, confirm that
   `rain_last_hour` goes up by N × 27.94 (0.01 mm).
 - Check the reed-switch edges on a scope with the real cables. Bounce should end well inside the
   debounce lockouts (see [Reed switch inputs](#reed-switch-inputs-anemometer-and-rain-identical)).

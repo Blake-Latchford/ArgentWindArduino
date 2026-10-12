@@ -19,16 +19,21 @@
 
 #define WIND_GUST_SECONDS 3       // WMO gust: highest rolling 3-second mean
 
+// Direction is variable when the resultant vector is shorter than this fraction, per mille, of what the
+// same pulses would make all pointing one way. 637 is 2/pi: headings spread evenly over half the compass,
+// METAR's threshold for a variable direction at any speed.
+#define WIND_VARIABLE_RESULTANT_PER_MILLE 637
+
 class WindSensor {
 public:
   // One second of readings.
-  struct Second {
+  struct WindSample {
     uint8_t pulses;    // anemometer closures during the second
     Heading heading;   // the vane's heading (see VaneDecoder), or Heading::Invalid for a vane fault
   };
 
-  // Record one second.
-  void addSecond(Second second);
+  // Record one second's sample.
+  void addSample(WindSample sample);
 
   // Speed and direction are only calculated over a full window. Until then they read 0 and invalid.
   bool windowFull() const { return _filled == WIND_WINDOW_SECONDS; }
@@ -39,25 +44,29 @@ public:
   // Highest rolling WIND_GUST_SECONDS mean in the window, or 0 until the window is full.
   uint16_t gustSpeed() const;
 
-  // Speed-weighted vector mean of the vane headings. Returns false, leaving `angle` alone, until the window
-  // is full, in a dead calm (no pulses in the window), when there is no valid heading in the window, or
-  // when the vectors cancel exactly.
-  bool direction(uint16_t& angle) const;
+  struct Direction {
+    // False until the window is full, in a calm, when there is no valid heading in the window, or when
+    // the vectors cancel exactly. When false, `variable` is false and `angle` is 0.
+    bool valid = false;
+    // The headings are spread too widely for their mean to say much (see WIND_VARIABLE_RESULTANT_PER_MILLE).
+    bool variable = false;
+    uint16_t angle = 0;   // speed-weighted vector mean of the vane headings
+  };
 
-  // The latest vane reading was an open circuit or a short.
-  bool vaneFault() const { return _vane_fault; }
+  Direction direction() const;
 
 private:
-  Second _seconds[WIND_WINDOW_SECONDS];
+  WindSample _samples[WIND_WINDOW_SECONDS];
   uint16_t _head = 0;     // next slot to write
   uint16_t _filled = 0;
-  bool _vane_fault = false;
 
   // Running sums over the window, so each second's update is O(1).
   uint32_t _pulse_sum = 0;
+  uint32_t _heading_pulse_sum = 0;   // pulses in the seconds with a valid heading
   int32_t _weighted_sin = 0, _weighted_cos = 0;
 
-  void addToSums(const Second& second) { changeSums(second, 1); }
-  void removeFromSums(const Second& second) { changeSums(second, -1); }
-  void changeSums(const Second& second, int8_t sign);
+  void addToSums(const WindSample& sample) { changeSums(sample, 1); }
+  void removeFromSums(const WindSample& sample) { changeSums(sample, -1); }
+  void changeSums(const WindSample& sample, int8_t sign);
+  bool variable() const;
 };

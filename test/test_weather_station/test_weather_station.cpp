@@ -21,7 +21,7 @@ static void test_initial_registers() {
 }
 
 static void test_registers_carry_sensor_values() {
-  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) WeatherStation::add({1, 3, uint8_t(i < 2 ? 1 : 0), EAST});
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) WeatherStation::add({3, uint8_t(i < 2 ? 1 : 0), EAST});
   WeatherRegisters r = WeatherStation::currentRegisters();
   TEST_ASSERT_EQUAL_UINT8((uint8_t)WIND_WINDOW_SECONDS, r.sequence);
   TEST_ASSERT_EQUAL_UINT32(WIND_WINDOW_SECONDS, r.uptime_seconds);
@@ -33,22 +33,25 @@ static void test_registers_carry_sensor_values() {
 }
 
 static void test_rain_after_an_hour() {
-  for (int i = 0; i < RAIN_HOUR_MINUTES * 60; i++) WeatherStation::add({1, 3, uint8_t(i < 2 ? 1 : 0), EAST});
+  for (int i = 0; i < RAIN_HOUR_MINUTES * 60; i++) WeatherStation::add({3, uint8_t(i < 2 ? 1 : 0), EAST});
   WeatherRegisters r = WeatherStation::currentRegisters();
   TEST_ASSERT_EQUAL_UINT16(56, r.rain_last_hour);
   TEST_ASSERT_EQUAL_HEX8(WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_DIRECTION_VALID | WEATHER_STATUS_RAIN_VALID,
                          r.status);
 }
 
-static void test_status_bits() {
-  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) WeatherStation::add({1, 0, 0, OPEN});
-  TEST_ASSERT_EQUAL_HEX8(WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_VANE_FAULT,
-                         WeatherStation::currentRegisters().status);
+static void test_variable_direction_bit() {
+  const uint16_t vane[] = {VaneDecoder::expected10bitCounts(Heading::North), EAST,
+                           VaneDecoder::expected10bitCounts(Heading::South)};
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) WeatherStation::add({3, 0, vane[i % 3]});
+  TEST_ASSERT_EQUAL_HEX8(
+      WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_DIRECTION_VALID | WEATHER_STATUS_DIRECTION_VARIABLE,
+      WeatherStation::currentRegisters().status);
 }
 
-static void test_missed_ticks_advance_uptime() {
-  WeatherStation::add({3, 0, 0, OPEN});
-  TEST_ASSERT_EQUAL_UINT32(3, WeatherStation::currentRegisters().uptime_seconds);
+static void test_status_bits() {
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) WeatherStation::add({0, 0, OPEN});
+  TEST_ASSERT_EQUAL_HEX8(WEATHER_STATUS_WIND_VALID, WeatherStation::currentRegisters().status);
 }
 
 int main() {
@@ -56,7 +59,7 @@ int main() {
   RUN_TEST(test_initial_registers);
   RUN_TEST(test_registers_carry_sensor_values);
   RUN_TEST(test_rain_after_an_hour);
+  RUN_TEST(test_variable_direction_bit);
   RUN_TEST(test_status_bits);
-  RUN_TEST(test_missed_ticks_advance_uptime);
   return UNITY_END();
 }
