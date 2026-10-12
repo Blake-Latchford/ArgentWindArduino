@@ -10,7 +10,8 @@
 // direction average is weighted by speed.
 //
 // Speeds are in 0.01 m/s. The anemometer closes once per second at 2.4 km/h, so one pulse per second is
-// 2/3 m/s. Directions are in tenths of a degree clockwise from north.
+// 2/3 m/s. Directions are in 1/65536 of a turn clockwise from north, so they wrap past north like a
+// uint16_t: 0x4000 is east, 0x8000 south, 0xC000 west.
 
 #ifndef WIND_WINDOW_SECONDS
 #define WIND_WINDOW_SECONDS 600   // 10 minutes, the WMO sustained-wind window
@@ -38,10 +39,10 @@ public:
   // Highest rolling WIND_GUST_SECONDS mean in the window, or 0 until the window is full.
   uint16_t gustSpeed() const;
 
-  // Speed-weighted vector mean of the vane headings, 0-3599. Returns false, leaving `tenths` alone, until
-  // the window is full, in a dead calm (no pulses in the window), when there is no valid heading in the
-  // window, or when the vectors cancel exactly.
-  bool direction(uint16_t& tenths) const;
+  // Speed-weighted vector mean of the vane headings. Returns false, leaving `angle` alone, until the window
+  // is full, in a dead calm (no pulses in the window), when there is no valid heading in the window, or
+  // when the vectors cancel exactly.
+  bool direction(uint16_t& angle) const;
 
   // The latest vane reading was an open circuit or a short.
   bool vaneFault() const { return _vane_fault; }

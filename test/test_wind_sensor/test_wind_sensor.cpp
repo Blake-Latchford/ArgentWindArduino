@@ -1,7 +1,7 @@
 #include <unity.h>
 
-#include "VaneDecoder.h"
-#include "WindSensor.h"
+#include "src/VaneDecoder.h"
+#include "src/WindSensor.h"
 
 void setUp() {}
 void tearDown() {}
@@ -39,7 +39,7 @@ static void test_nothing_until_the_window_is_full() {
   TEST_ASSERT_EQUAL_UINT16(600, w.averageSpeed());
   TEST_ASSERT_EQUAL_UINT16(600, w.gustSpeed());
   TEST_ASSERT_TRUE(w.direction(dir));
-  TEST_ASSERT_EQUAL_UINT16(900, dir);
+  TEST_ASSERT_EQUAL_UINT16(0x4000, dir);
 }
 
 static void test_one_pulse_per_second_is_two_thirds_meter_per_second() {
@@ -93,7 +93,7 @@ static void test_direction_is_speed_weighted() {
   for (int i = 0; i < WIND_WINDOW_SECONDS / 2; i++) w.addSecond({1, WEST});
   uint16_t dir = 0;
   TEST_ASSERT_TRUE(w.direction(dir));
-  TEST_ASSERT_EQUAL_UINT16(900, dir);
+  TEST_ASSERT_EQUAL_UINT16(0x4000, dir);
 }
 
 static void test_direction_averages_across_north() {
@@ -103,6 +103,16 @@ static void test_direction_averages_across_north() {
   uint16_t dir = 1234;
   TEST_ASSERT_TRUE(w.direction(dir));
   TEST_ASSERT_EQUAL_UINT16(0, dir);
+}
+
+// Just west of north is near the top of the range, not negative.
+static void test_direction_west_of_north_wraps_high() {
+  WindSensor w;
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSecond({5, NNW});
+  uint16_t dir = 0;
+  TEST_ASSERT_TRUE(w.direction(dir));
+  // 337.5 degrees. The x1000 sin/cos table puts off-axis headings a few counts (hundredths of a degree) off.
+  TEST_ASSERT_UINT16_WITHIN(8, 0xF000, dir);
 }
 
 static void test_no_direction_in_calm() {
@@ -124,7 +134,7 @@ static void test_invalid_vane_samples_are_ignored() {
   w.addSecond({5, WEST});
   TEST_ASSERT_FALSE(w.vaneFault());
   TEST_ASSERT_TRUE(w.direction(dir));
-  TEST_ASSERT_EQUAL_UINT16(2700, dir);
+  TEST_ASSERT_EQUAL_UINT16(0xC000, dir);
 }
 
 static void test_direction_forgets_evicted_samples() {
@@ -133,7 +143,7 @@ static void test_direction_forgets_evicted_samples() {
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSecond({1, WEST});
   uint16_t dir = 0;
   TEST_ASSERT_TRUE(w.direction(dir));
-  TEST_ASSERT_EQUAL_UINT16(2700, dir);
+  TEST_ASSERT_EQUAL_UINT16(0xC000, dir);
 }
 
 int main() {
@@ -147,6 +157,7 @@ int main() {
   RUN_TEST(test_gust_across_ring_wraparound);
   RUN_TEST(test_direction_is_speed_weighted);
   RUN_TEST(test_direction_averages_across_north);
+  RUN_TEST(test_direction_west_of_north_wraps_high);
   RUN_TEST(test_no_direction_in_calm);
   RUN_TEST(test_invalid_vane_samples_are_ignored);
   RUN_TEST(test_direction_forgets_evicted_samples);

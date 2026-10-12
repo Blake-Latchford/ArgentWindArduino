@@ -1,6 +1,6 @@
 #include <unity.h>
 
-#include "RainGauge.h"
+#include "src/RainGauge.h"
 
 void setUp() {}
 void tearDown() {}

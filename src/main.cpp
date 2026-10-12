@@ -16,8 +16,6 @@
 #include "Watchdog.h"
 #include "WeatherStation.h"
 
-static WeatherStation station;
-
 void setup() {
 #ifdef WEATHER_DEBUG
   BOARD_DEBUG_SERIAL.begin(WEATHER_DEBUG_BAUD);
@@ -29,7 +27,7 @@ void setup() {
   ReedSwitches::begin();
   VaneAdc::begin();
   IICServer::begin();
-  IICServer::update(station.currentRegisters());
+  IICServer::update(WeatherStation::currentRegisters());
   Watchdog::begin();
 }
 
@@ -44,9 +42,9 @@ void loop() {
     counts.rain_tips,
     VaneAdc::sample()
   };
-  station.add(sample);
+  WeatherStation::add(sample);
 
-  WeatherRegisters registers = station.currentRegisters();
+  WeatherRegisters registers = WeatherStation::currentRegisters();
   IICServer::update(registers);
 
 #ifdef WEATHER_DEBUG

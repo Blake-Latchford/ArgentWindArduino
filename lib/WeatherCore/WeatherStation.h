@@ -2,10 +2,7 @@
 
 #include <stdint.h>
 
-#include "RainGauge.h"
-#include "VaneDecoder.h"
 #include "WeatherRegisters.h"
-#include "WindSensor.h"
 
 // Everything the board measures in one second. The board fills one in each second and passes it to
 // WeatherStation::add(). Count the reed switches with a PulseCounter each.
@@ -21,17 +18,18 @@ struct WeatherSample {
 // The wind sensor and rain gauge together, fed once per second from the hardware, producing the
 // WeatherRegisters values. It is not interrupt-safe: count pulses in interrupts with PulseCounter, and call
 // add() and currentRegisters() from the main loop.
+// There is one station, so its state lives in WeatherStation.cpp.
 class WeatherStation {
 public:
+  WeatherStation() = delete;
+
   // Record one sample. A backlog (seconds > 1) advances uptime by all of it but lands in one second of
   // wind and rain data, so no pulses or tips are lost.
-  void add(const WeatherSample& sample);
+  static void add(const WeatherSample& sample);
 
-  WeatherRegisters currentRegisters() const;
+  static WeatherRegisters currentRegisters();
 
-private:
-  WindSensor _wind;
-  RainGauge _rain;
-  uint32_t _uptime_seconds = 0;
-  uint8_t _sequence = 0;
+  // Back to the power-up state, for tests. Builds the replacement sensors on the stack, so keep it off
+  // the AVR.
+  static void reset();
 };

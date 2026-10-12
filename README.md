@@ -39,7 +39,7 @@ This firmware only supports a 100kHz I2C bus, which is the maximum the 2MHz cloc
 
 ## Calibrating the vane
 
-The table in `lib/WeatherCore/VaneDecoder.cpp` uses nominal datasheet resistances. To replace it with real
+The table in `lib/WeatherCore/src/VaneDecoder.cpp` uses nominal datasheet resistances. To replace it with real
 values:
 
 1. Install the vane on its real cable, and flash the `promicro_debug` build.
@@ -124,4 +124,4 @@ D4 ──[10k]──┬── A0
 - The divider draws current only while sampling.
 - The ADC reference is VCC, the same supply that drives the divider, so the reading is ratiometric: the
   same vane position gives the same count on a 3.3V or a 5V board, and supply drift cancels.
-- The firmware maps readings to 16 headings using the table in `lib/WeatherCore/VaneDecoder.cpp`.
+- The firmware maps readings to 16 headings using the table in `lib/WeatherCore/src/VaneDecoder.cpp`.

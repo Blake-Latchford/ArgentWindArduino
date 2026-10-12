@@ -21,7 +21,7 @@ struct __attribute__((packed)) WeatherRegisters {
   uint8_t sequence;             // 0x03  increments on every 1 s update
   uint16_t wind_avg;            // 0x04  mean speed over the window, 0.01 m/s
   uint16_t wind_gust;           // 0x06  highest rolling 3 s mean in the window, 0.01 m/s
-  uint16_t wind_direction;      // 0x08  speed-weighted mean heading, 0.1 degree (0-3599)
+  uint16_t wind_direction;      // 0x08  speed-weighted mean heading, 1/65536 turn (0x4000 is east)
   uint16_t rain_last_hour;      // 0x0A  rainfall over the last 60 complete minutes, 0.01 mm
   uint32_t uptime_seconds;      // 0x0C
 };

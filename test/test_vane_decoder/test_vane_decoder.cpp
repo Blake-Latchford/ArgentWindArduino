@@ -1,6 +1,6 @@
 #include <unity.h>
 
-#include "VaneDecoder.h"
+#include "src/VaneDecoder.h"
 
 void setUp() {}
 void tearDown() {}

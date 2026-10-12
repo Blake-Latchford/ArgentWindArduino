@@ -75,7 +75,7 @@ uint16_t WindSensor::gustSpeed() const {
   return hundredthsMetersPerSecond(best, WIND_GUST_SECONDS);
 }
 
-bool WindSensor::direction(uint16_t& tenths) const {
+bool WindSensor::direction(uint16_t& angle) const {
   if (!windowFull()) {
     return false;
   }
@@ -85,11 +85,9 @@ bool WindSensor::direction(uint16_t& tenths) const {
     return false;
   }
 
-  double degrees = atan2((double)_weighted_sin, (double)_weighted_cos) * (180.0 / M_PI);
-  if (degrees < 0) {
-    degrees += 360.0;
-  }
-  uint16_t result = (uint16_t)lround(degrees * 10.0);
-  tenths = result >= 3600 ? result - 3600 : result;
+  // atan2 gives -pi..pi, so this is -32768..32768. Converting to uint16_t wraps it modulo a full turn:
+  // west of north comes out as 0x8000..0xFFFF, and both ends of the range land on south (0x8000).
+  double radians = atan2((double)_weighted_sin, (double)_weighted_cos);
+  angle = (uint16_t)(int32_t)lround(radians * (32768.0 / M_PI));
   return true;
 }
