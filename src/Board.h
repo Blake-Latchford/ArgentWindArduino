@@ -12,6 +12,7 @@
 #define BOARD_ANEMOMETER_PIN 8
 #define BOARD_RAIN_PIN 9
 
+// Arbitrary
 #define BOARD_VANE_DRIVE_PIN 4
 #define BOARD_VANE_ADC_PIN A0
 
