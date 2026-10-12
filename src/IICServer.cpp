@@ -7,12 +7,6 @@
 
 #include "Board.h"
 
-// 1 (the default) when the bus has its own pull-ups on SDA/SCL, so the internal ones are turned off. 0
-// keeps the internal pull-ups on; at 20-50k they're only enough for a short bus at 100kHz.
-#ifndef WEATHER_I2C_EXTERNAL_PULLUPS
-#define WEATHER_I2C_EXTERNAL_PULLUPS 1
-#endif
-
 // The address jumper selects between these at reset (platformio.ini).
 #ifndef WEATHER_I2C_PRIMARY_ADDRESS
 #define WEATHER_I2C_PRIMARY_ADDRESS 0x6C
@@ -26,12 +20,10 @@ volatile uint8_t IICServer::pointer;
 
 void IICServer::begin() {
   Wire.begin(addressJumperFitted() ? WEATHER_I2C_SECONDARY_ADDRESS : WEATHER_I2C_PRIMARY_ADDRESS);
-#if WEATHER_I2C_EXTERNAL_PULLUPS
   // Wire.begin() turns on the internal pull-ups on SDA/SCL; the bus has its own. On an input, writing
   // LOW turns the pull-up off.
   digitalWrite(SDA, LOW);
   digitalWrite(SCL, LOW);
-#endif
   Wire.onReceive(onReceive);
   Wire.onRequest(onRequest);
 }
