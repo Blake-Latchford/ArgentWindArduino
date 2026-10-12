@@ -16,7 +16,6 @@ WeatherRegisters WeatherStation::currentRegisters() const {
   r.status = 0;
   if (_wind.windowFull()) r.status |= WEATHER_STATUS_WIND_VALID;
   if (_wind.vaneFault()) r.status |= WEATHER_STATUS_VANE_FAULT;
-  if (_watchdog_reset) r.status |= WEATHER_STATUS_WATCHDOG_RESET;
   if (_rain.hourFull()) r.status |= WEATHER_STATUS_RAIN_VALID;
 
   r.wind_avg = _wind.averageSpeed();

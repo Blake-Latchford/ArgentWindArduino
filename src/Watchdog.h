@@ -6,9 +6,6 @@ class Watchdog {
  public:
   Watchdog() = delete;
 
-  // Whether the previous reset was the watchdog. Call once, before begin().
-  static bool causedLastReset();
-
   static void begin();
 
   // Call on every tick.

@@ -12,8 +12,7 @@
 #define WEATHER_STATUS_WIND_VALID 0x01     // a full wind window is in; until then wind values read 0
 #define WEATHER_STATUS_DIRECTION_VALID 0x02
 #define WEATHER_STATUS_VANE_FAULT 0x04     // latest vane reading was an open circuit or a short
-#define WEATHER_STATUS_WATCHDOG_RESET 0x08 // last reset was the watchdog
-#define WEATHER_STATUS_RAIN_VALID 0x10     // a full rain hour is in; until then rain reads 0
+#define WEATHER_STATUS_RAIN_VALID 0x08     // a full rain hour is in; until then rain reads 0
 
 struct __attribute__((packed)) WeatherRegisters {
   uint8_t device_id;            // 0x00  WEATHER_DEVICE_ID

@@ -13,8 +13,6 @@ Micro USB-C (primary) and the 3.3V/8MHz Pro Micro.
   as far as I know; confirm it for the Caterina bootloader on both boards.
 - [ ] Vane counts match between the two boards for the same resistor (the reading is ratiometric).
 - [ ] RAK reads `0x57` at 0x6C, and at 0x6E with the jumper.
-- [ ] Watchdog reset sets the status bit (hang the loop on purpose in a test build). The bootloader
-  runs after a watchdog reset and uses RAM, so it may overwrite the `.noinit` marker and lose the bit.
 - [ ] After a watchdog reset the bootloader checks a "magic key" in RAM to decide whether to stay in
   the bootloader. The core code that sets the key isn't built any more; confirm that none of the
   firmware's own RAM at the key's address can hold the key's value at a reset.

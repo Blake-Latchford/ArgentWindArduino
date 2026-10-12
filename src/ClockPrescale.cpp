@@ -40,8 +40,8 @@ static bool crystalIs16MHz() {
   }
   uint16_t counts = TCNT1;
 
-  // A pending flag would fire as soon as Watchdog::begin() enables the interrupt, and record a watchdog
-  // reset that never happened.
+  // A pending flag would fire as soon as Watchdog::begin() enables the interrupt, and spend the
+  // interrupt stage before the first timeout.
   WDTCSR = _BV(WDIF);
   TCCR1B = 0;
   TCNT1 = 0;

@@ -23,24 +23,15 @@ struct WeatherSample {
 // add() and currentRegisters() from the main loop.
 class WeatherStation {
 public:
-  // Flag that the last reset was the watchdog, for the status register. Boards without a watchdog leave it
-  // unset.
-  void setWatchdogReset(bool watchdog_reset) { _watchdog_reset = watchdog_reset; }
-
   // Record one sample. A backlog (seconds > 1) advances uptime by all of it but lands in one second of
   // wind and rain data, so no pulses or tips are lost.
   void add(const WeatherSample& sample);
 
-  // The current values, laid out as the register map.
   WeatherRegisters currentRegisters() const;
-
-  const WindSensor& wind() const { return _wind; }
-  const RainGauge& rain() const { return _rain; }
 
 private:
   WindSensor _wind;
   RainGauge _rain;
   uint32_t _uptime_seconds = 0;
   uint8_t _sequence = 0;
-  bool _watchdog_reset = false;
 };

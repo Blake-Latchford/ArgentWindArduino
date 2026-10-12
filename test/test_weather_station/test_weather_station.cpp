@@ -43,10 +43,8 @@ static void test_rain_after_an_hour() {
 
 static void test_status_bits() {
   WeatherStation s;
-  s.setWatchdogReset(true);
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) s.add({1, 0, 0, OPEN});
-  TEST_ASSERT_EQUAL_HEX8(WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_VANE_FAULT | WEATHER_STATUS_WATCHDOG_RESET,
-                         s.currentRegisters().status);
+  TEST_ASSERT_EQUAL_HEX8(WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_VANE_FAULT, s.currentRegisters().status);
 }
 
 static void test_missed_ticks_advance_uptime() {

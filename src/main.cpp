@@ -19,8 +19,6 @@
 static WeatherStation station;
 
 void setup() {
-  station.setWatchdogReset(Watchdog::causedLastReset());
-
 #ifdef WEATHER_DEBUG
   BOARD_DEBUG_SERIAL.begin(WEATHER_DEBUG_BAUD);
   BOARD_DEBUG_SERIAL.println(F("weather interface"));
