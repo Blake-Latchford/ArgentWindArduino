@@ -3,7 +3,8 @@
 #include <stdint.h>
 
 // Anemometer and rain gauge reed switches (pins in Board.h), counted on falling edges by pin-change
-// interrupt. Each pin has an external 100k pull-up and an RC debounce network.
+// interrupt.
+// Debouncing is in software, on Timer1, so call OneHzSleep::begin() first.
 class ReedSwitches {
  public:
   ReedSwitches() = delete;

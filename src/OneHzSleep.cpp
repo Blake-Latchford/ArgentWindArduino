@@ -6,12 +6,12 @@
 
 static volatile uint8_t pending_ticks;
 
-// CTC mode: F_CPU / 64 = 31250 counts per second at 2MHz.
+// CTC mode, clock / 64, counting 0 to COUNTS_PER_SECOND - 1.
 void OneHzSleep::begin() {
   set_sleep_mode(SLEEP_MODE_IDLE);
   TCCR1A = 0;
   TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10);
-  OCR1A = F_CPU / 64 - 1;
+  OCR1A = COUNTS_PER_SECOND - 1;
   TCNT1 = 0;
   TIFR1 = _BV(OCF1A);
   TIMSK1 = _BV(OCIE1A);

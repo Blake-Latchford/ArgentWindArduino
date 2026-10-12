@@ -53,7 +53,8 @@ values:
 - With the debug build, spin the anemometer and confirm that `pulses` follows it.
 - After the first hour (status bit 4 set), tip the rain bucket N times. Within two minutes, confirm that
   `rain_last_hour` goes up by N × 27.94 (0.01 mm).
-- Check the reed-switch edges on a scope with the real cables, and adjust the RC values if needed.
+- Check the reed-switch edges on a scope with the real cables. Bounce should end well inside the
+  debounce lockouts (see [Reed switch inputs](#reed-switch-inputs-anemometer-and-rain-identical)).
 
 # Hardware
 
@@ -83,7 +84,7 @@ shorting RST to GND, and wire I2C to D2/D3 with pull-ups in step 9.
 - SparkFun Qwiic Pro Micro USB-C, set to 3.3V, headers soldered
 - USB-C cable
 - 3.3V USB-serial adapter, for the debug output (only its TX, RX and GND are used)
-- 2× 100k, 2× 22nF, 2× 1k (reed switch inputs)
+- 2× 10nF (reed switch inputs)
 - 1× 10k (vane divider)
 - A Qwiic cable, with its red wire cut or a cable to pins at the RAK end
 - A jumper shunt, to check the alternate I2C address (step 9)
@@ -118,9 +119,11 @@ to drive the I2C bus at 5V, possibly damaging the master.
    `vane_raw` floats and means nothing.
 
 4. **Anemometer input (D8).** Build the reed switch circuit from
-   [Reed switch inputs](#reed-switch-inputs-anemometer-and-rain-identical): 100k from D8 to 3.3V, 22nF
-   from D8 to GND, and 1k from D8 to one side of a pushbutton whose other side goes to GND. Press the
-   button a few times within one second; `pulses` should count the presses, one per press.
+   [Reed switch inputs](#reed-switch-inputs-anemometer-and-rain-identical): 10nF from D8 to GND, and a
+   pushbutton from D8 to GND. Press the
+   button a few times within one second; `pulses` should count the presses, one per press. A
+   pushbutton can bounce for longer than a reed switch, so an occasional double count here is the
+   button, not the circuit.
 
 5. **Rain input (D9).** Build the same circuit on D9. The debug line has no per-second rain count, so
    confirm it with a meter or scope instead: D9 sits at 3.3V and drops to near 0V while the button is
@@ -159,20 +162,25 @@ Pin assignments live in [src/Board.h](src/Board.h)
 ## Reed switch inputs (anemometer and rain, identical)
 
 ```
-VCC ──[100k]──┬──────────── reed pin (see Pin assignments)
-              │
-            [22nF]
-              │
-GND ──────────┴── switch ──[1k]── (pin node)
+reed pin (see Pin assignments) ──┬────────┐
+                                 │        │
+                              [10nF]    switch
+                                 │        │
+GND ─────────────────────────────┴────────┘
 ```
 
-- 100k pull-up from the pin to the board's VCC (3.3V or 5V): 33µA at 3.3V, 50µA at 5V, while the
-  switch sits closed, against ~100µA with the internal pull-up.
-- 22nF from the pin to GND debounces. With the 100k that's about a 2ms rise, fast enough for gust-level
-  pulse rates of ~60Hz. The time constant is the same at either voltage.
-- 1k in series between the switch cable and the pin node limits discharge current into the capacitor.
+- The pull-up is the pin's internal one (20-50k), so there's no pull-up resistor. It draws about 100µA
+  at 3.3V while a switch sits closed, as the anemometer can when it stops.
+- Debouncing is in software (`src/ReedSwitches.cpp`): the firmware counts a closure on its first
+  falling edge, then ignores that pin for a lockout, 5ms for the anemometer and 100ms for the rain gauge.
+  The anemometer's fastest pulses are about 16ms apart (150 km/h), and rain tips are seconds apart.
+- 10nF from the pin to GND filters noise from the long outdoor cables, so a spike of a few µs isn't
+  counted as a pulse. With the internal pull-up that's about a 0.2-0.5ms rise, short against the
+  lockouts. The cable's own capacitance, roughly 50pF per metre, adds to it.
+- There's no series resistor, so a closing switch discharges the capacitor straight through its
+  contacts. At 10nF and 3.3V that's a tiny amount of energy. It also leaves nothing limiting the current
+  from a surge on the cable into the pin (see [Surge protection](#surge-protection)).
 - The other side of each switch goes to GND; pulses are falling edges.
-- The RC values are a starting point. Check them on a scope with the real cable.
 
 ## Wind vane
 
@@ -200,8 +208,8 @@ D4 ──[10k]──┬── A0
 
 ## Surge protection
 
-The sensor cables are long outdoor runs, so they pick up surges and static discharge. The 1k series
-resistors help. For a mast install, also add small TVS diodes from each sensor line to GND at the board,
+The sensor cables are long outdoor runs, so they pick up surges and static discharge. The reed inputs'
+10nF capacitors absorb fast spikes, but nothing limits the current into the pins. For a mast install, also add small TVS diodes from each sensor line to GND at the board,
 rated for the board's logic voltage (3.3V or 5V class).
 
 ## Programming
@@ -221,6 +229,7 @@ rated for the board's logic voltage (3.3V or 5V class).
   in idle sleep. Timer0 is off, so `millis()` and `delay()` don't work. SPI, Timers 3 and 4, USB, the
   comparator and (outside debug builds) the USART are off too. The ADC is powered only while the vane is
   being sampled.
-- **Time base:** Timer1 in CTC mode interrupts at 1Hz.
+- **Time base:** Timer1 in CTC mode interrupts at 1Hz on compare A. Its compares B and C time the reed
+  switch debounce lockouts.
 - **Hang recovery:** the watchdog runs in interrupt-then-reset mode with a 2s timeout. The main loop
   re-arms it on each tick. If the watchdog does reset the chip, the next boot sets a status bit.

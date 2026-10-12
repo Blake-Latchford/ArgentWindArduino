@@ -27,11 +27,11 @@ void setup() {
 #endif
 
   DisableUnusedHardware::begin();
+  OneHzSleep::begin();
   ReedSwitches::begin();
   VaneAdc::begin();
   IICServer::begin();
   IICServer::update(station.currentRegisters());
-  OneHzSleep::begin();
   Watchdog::begin();
 }
 
