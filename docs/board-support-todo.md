@@ -5,7 +5,7 @@ Micro USB-C (primary) and the 3.3V/8MHz Pro Micro.
 
 ## 1. Verification
 
-- [ ] RAK reads `0x57` at 0x6C, and at 0x6E with the jumper.
+- [ ] RAK reads `0x57` at 0x6E with the jumper.
 - [ ] After a watchdog reset the bootloader checks a "magic key" in RAM to decide whether to stay in
   the bootloader. The core code that sets the key isn't built any more; confirm that none of the
   firmware's own RAM at the key's address can hold the key's value at a reset.
