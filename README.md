@@ -68,7 +68,7 @@ A standard 3.3V Pro Micro should also work with a bit of extra soldering.
 
 I might switch to a pro mini at some point.
 
-## Hardware mofications
+## Hardware modifications
 
 Do **not** connect the 5V from a Rak WizBlock to the sensor board.
 
