@@ -4,8 +4,7 @@
 
 #include "WeatherRegisters.h"
 
-// I2C slave serving WeatherRegisters. The master writes one byte to set the register pointer, then reads
-// from there to the end of the map.
+// I2C slave serving WeatherRegisters.
 class IICServer {
  public:
   IICServer() = delete;

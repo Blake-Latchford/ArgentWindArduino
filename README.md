@@ -27,7 +27,9 @@ pio run -e promicro -t upload   # build and flash (double-tap reset first, see P
 
 ## I2C register map
 
-To read everything, write `0x00` and read 16 bytes.
+To read everything, read 16 bytes. The register pointer starts at `0x00` and returns there after every
+read, so writing `0x00` first is optional. To start part way through the map, write the register offset,
+then read.
 A single read of the whole map provides a consistent snapshot.
 The board [defaults](AgilentWindArduino/src/IICServer.cpp) to an I2C slave at address `0x6C` or `0x6E` with a jumper across D5 and D6.
 Values are little endian.

@@ -16,7 +16,7 @@
 #endif
 
 WeatherRegisters IICServer::served;
-volatile uint8_t IICServer::pointer;
+volatile uint8_t IICServer::pointer = 0;
 
 void IICServer::begin() {
   Wire.begin(addressJumperFitted() ? WEATHER_I2C_SECONDARY_ADDRESS : WEATHER_I2C_PRIMARY_ADDRESS);
@@ -52,11 +52,13 @@ void IICServer::onReceive(int count) {
 }
 
 // Runs in the TWI ISR, so the copy can't interleave with update(), and the whole read comes from this
-// one copy.
+// one copy. Wire doesn't report how many bytes the master took, so every read returns the pointer to
+// 0x00, and a plain read with no pointer write gets the whole map.
 void IICServer::onRequest() {
   if (pointer < sizeof(served)) {
     Wire.write((const uint8_t*)&served + pointer, sizeof(served) - pointer);
   } else {
     Wire.write(0xFF);
   }
+  pointer = 0;
 }
