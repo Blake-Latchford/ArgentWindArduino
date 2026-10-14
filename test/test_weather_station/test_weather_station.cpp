@@ -40,13 +40,13 @@ static void test_rain_after_an_hour() {
                          r.status);
 }
 
-static void test_variable_direction_bit() {
+static void test_direction_stddev_register() {
   const uint16_t vane[] = {VaneDecoder::expected10bitCounts(Heading::North), EAST,
                            VaneDecoder::expected10bitCounts(Heading::South)};
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) WeatherStation::add({3, 0, vane[i % 3]});
-  TEST_ASSERT_EQUAL_HEX8(
-      WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_DIRECTION_VALID | WEATHER_STATUS_DIRECTION_VARIABLE,
-      WeatherStation::currentRegisters().status);
+  WeatherRegisters r = WeatherStation::currentRegisters();
+  TEST_ASSERT_EQUAL_HEX8(WEATHER_STATUS_WIND_VALID | WEATHER_STATUS_DIRECTION_VALID, r.status);
+  TEST_ASSERT_EQUAL_UINT16(14504, r.wind_direction_stddev);   // about 79.7 degrees
 }
 
 static void test_status_bits() {
@@ -59,7 +59,7 @@ int main() {
   RUN_TEST(test_initial_registers);
   RUN_TEST(test_registers_carry_sensor_values);
   RUN_TEST(test_rain_after_an_hour);
-  RUN_TEST(test_variable_direction_bit);
+  RUN_TEST(test_direction_stddev_register);
   RUN_TEST(test_status_bits);
   return UNITY_END();
 }

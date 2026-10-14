@@ -27,7 +27,7 @@ pio run -e promicro -t upload   # build and flash (double-tap reset first, see P
 
 ## I2C register map
 
-To read everything, read 16 bytes. The register pointer starts at `0x00` and returns there after every
+To read everything, read 18 bytes. The register pointer starts at `0x00` and returns there after every
 read, so writing `0x00` first is optional. To start part way through the map, write the register offset,
 then read.
 A single read of the whole map provides a consistent snapshot.
@@ -65,12 +65,9 @@ values:
 The [SparkFun Qwiic Pro Micro USB-C](https://www.sparkfun.com/sparkfun-qwiic-pro-micro-usb-c-atmega32u4.html) (DEV-15795) is the primary supported hardware.
 The goal is to allow a single QWIIC to provide power and data, though that needs to be proven.
 A standard 3.3V Pro Micro should also work with a bit of extra soldering.
+Do **not** connect the 5V from a Rak WizBlock to the sensor board.
 
 I might switch to a pro mini at some point.
-
-## Hardware modifications
-
-Do **not** connect the 5V from a Rak WizBlock to the sensor board.
 
 ## Assembly
 

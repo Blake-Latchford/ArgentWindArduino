@@ -57,6 +57,8 @@ void loop() {
   BOARD_DEBUG_SERIAL.print(registers.wind_gust);
   BOARD_DEBUG_SERIAL.print(F(" dir="));
   BOARD_DEBUG_SERIAL.print(registers.wind_direction);
+  BOARD_DEBUG_SERIAL.print(F(" dir_sd="));
+  BOARD_DEBUG_SERIAL.print(registers.wind_direction_stddev);
   BOARD_DEBUG_SERIAL.print(F(" rain_1h="));
   BOARD_DEBUG_SERIAL.println(registers.rain_last_hour);
   BOARD_DEBUG_SERIAL.flush();

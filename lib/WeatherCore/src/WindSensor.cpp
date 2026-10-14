@@ -4,13 +4,17 @@
 
 namespace {
 
-// sin and cos of each Heading, scaled by HEADING_SCALE.
-const int32_t HEADING_SCALE = 1000;
-const int16_t HEADING_SIN[HEADING_COUNT] = {
-  0, 383, 707, 924, 1000, 924, 707, 383, 0, -383, -707, -924, -1000, -924, -707, -383,
+constexpr uint16_t WIND_GUST_SECONDS = 3U;  // WMO gust: highest rolling 3-second mean
+
+// sin and cos of each Heading, scaled by HEADING_SCALE, the full range of int16_t.
+constexpr int32_t HEADING_SCALE = 32767;
+constexpr int16_t HEADING_SIN[HEADING_COUNT] = {
+  0, 12539, 23170, 30273, 32767, 30273, 23170, 12539,
+  0, -12539, -23170, -30273, -32767, -30273, -23170, -12539,
 };
-const int16_t HEADING_COS[HEADING_COUNT] = {
-  1000, 924, 707, 383, 0, -383, -707, -924, -1000, -924, -707, -383, 0, 383, 707, 924,
+constexpr int16_t HEADING_COS[HEADING_COUNT] = {
+  32767, 30273, 23170, 12539, 0, -12539, -23170, -30273,
+  -32767, -30273, -23170, -12539, 0, 12539, 23170, 30273,
 };
 
 // 0.01 m/s for `pulses` over `seconds`, at 2/3 m/s per pulse per second, rounded.
@@ -40,9 +44,11 @@ void WindSensor::changeSums(const WindSample& sample, int8_t sign) {
   _pulse_sum += sign * (int32_t)sample.pulses;
   if (sample.heading != Heading::Invalid) {
     uint8_t i = (uint8_t)sample.heading;
-    _heading_pulse_sum += sign * (int32_t)sample.pulses;
     _weighted_sin += sign * (int32_t)sample.pulses * HEADING_SIN[i];
     _weighted_cos += sign * (int32_t)sample.pulses * HEADING_COS[i];
+    _heading_count += sign;
+    _unit_sin += sign * HEADING_SIN[i];
+    _unit_cos += sign * HEADING_COS[i];
   }
 }
 
@@ -58,51 +64,73 @@ uint16_t WindSensor::gustSpeed() const {
     return 0;
   }
 
-  // Walk the window oldest to newest, keeping a rolling sum of the last WIND_GUST_SECONDS entries. In a
-  // full window, the oldest sample is the one _head is about to overwrite.
+  // Walk the window oldest to newest, keeping a rolling sum of the last WIND_GUST_SECONDS entries.
+  // Skip triples that cross head, since the readings are not continous there.
+  uint16_t lead = _head;
   uint16_t rolling = 0;
-  uint16_t best = 0;
-  for (uint16_t n = 0; n < WIND_WINDOW_SECONDS; n++) {
-    uint16_t i = (_head + n) % WIND_WINDOW_SECONDS;
-    rolling += _samples[i].pulses;
-    if (n >= WIND_GUST_SECONDS) {
-      rolling -= _samples[(i + WIND_WINDOW_SECONDS - WIND_GUST_SECONDS) % WIND_WINDOW_SECONDS].pulses;
-    }
-    if (n + 1 >= WIND_GUST_SECONDS && rolling > best) {
+
+  // Don't use the obvious algorithm because modulo is slow on AVR.
+  // Fill the first WIND_GUST_SECONDS.
+  for (uint16_t n = 0; n < WIND_GUST_SECONDS; n++) {
+    rolling += _samples[lead].pulses;
+    if (++lead >= WIND_WINDOW_SECONDS) lead = 0;
+  }
+  uint16_t best = rolling;
+
+  auto slide = [&](uint16_t add, uint16_t drop) __attribute__((always_inline)) {
+    rolling += _samples[add].pulses;
+    rolling -= _samples[drop].pulses;
+    if (rolling > best) {
       best = rolling;
     }
+  };
+
+  // Check triples right of head.
+  if (lead > _head) {
+    for (; lead < WIND_WINDOW_SECONDS; lead++)
+      slide(lead, lead - WIND_GUST_SECONDS);
+    lead = 0;
   }
+  // Check valid triples spanning the wrap.
+  for (; lead < WIND_GUST_SECONDS && lead < _head; lead++) {
+    slide(lead, lead + WIND_WINDOW_SECONDS - WIND_GUST_SECONDS);
+  }
+  // Check triples left of the head.
+  for (; lead < _head; lead++) slide(lead, lead - WIND_GUST_SECONDS);
+
   return hundredthsMetersPerSecond(best, WIND_GUST_SECONDS);
 }
 
 WindSensor::Direction WindSensor::direction() const {
   Direction result;
-  if (!windowFull())
+  if (!windowFull() || _heading_count == 0)
     return result;
 
-  if (averageSpeed() < 5)
-    return result;
+  result.stddev = stddev();
 
   // In a dead calm every heading has zero weight, so there is no direction to report.
   if (_weighted_sin == 0 && _weighted_cos == 0) {
     return result;
   }
-
-  // atan2 gives -pi..pi, so this is -32768..32768. Converting to uint16_t wraps it modulo a full turn:
-  // west of north comes out as 0x8000..0xFFFF, and both ends of the range land on south (0x8000).
+  // atan2 gives -pi..pi, so this is -32768..32768.
   double radians = atan2((double)_weighted_sin, (double)_weighted_cos);
-  result.angle = (uint16_t)(int32_t)lround(radians * (32768.0 / M_PI));
-  result.variable = variable();
+  result.angle = (uint16_t)lround(radians * (32768.0 / M_PI));
   result.valid = true;
   return result;
 }
 
-bool WindSensor::variable() const {
-  // Each pulse adds a vector HEADING_SCALE long, so the threshold is a length too. Comparing squared
-  // lengths avoids the square root. The worst case, 255 pulses every second, squares to about 1e16, so
-  // the squares need 64 bits.
-  int64_t threshold = (int64_t)_heading_pulse_sum * HEADING_SCALE * WIND_VARIABLE_RESULTANT_PER_MILLE / 1000;
-  int64_t s = _weighted_sin;
-  int64_t c = _weighted_cos;
-  return ((s * s) + (c * c)) < (threshold * threshold);
+// Needs at least one valid heading in the window.
+uint16_t WindSensor::stddev() const {
+  // Yamartino :
+  // e = sqrt(1 - (sa^2 + ca^2))
+  // sigma = asin(e) * (1 + (2/sqrt(3) - 1) * e^3)
+  const double n = (double)_heading_count * HEADING_SCALE;
+  const double sin_average = _unit_sin / n;
+  const double cos_average = _unit_cos / n;
+  const double epsilon_squared = 1.0 - (sin_average * sin_average + cos_average * cos_average);
+  if (epsilon_squared <= 0.0)
+    return 0;
+  const double epsilon = sqrt(epsilon_squared);
+  const double radians = asin(epsilon) * (1 + (2 / sqrt(3.0) - 1) * epsilon * epsilon * epsilon);
+  return (uint16_t)lround(radians * (32768.0 / M_PI));
 }

@@ -31,8 +31,8 @@ WeatherRegisters WeatherStation::currentRegisters() {
   
   const WindSensor::Direction direction = wind.direction();
   if (direction.valid) r.status |= WEATHER_STATUS_DIRECTION_VALID;
-  if (direction.variable) r.status |= WEATHER_STATUS_DIRECTION_VARIABLE;
   r.wind_direction = direction.angle;
+  r.wind_direction_stddev = direction.stddev;
 
   r.rain_last_hour = rain.lastHourRain();
   r.uptime_seconds = uptime_seconds;

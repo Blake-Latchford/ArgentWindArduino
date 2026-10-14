@@ -14,15 +14,8 @@
 // uint16_t: 0x4000 is east, 0x8000 south, 0xC000 west.
 
 #ifndef WIND_WINDOW_SECONDS
-#define WIND_WINDOW_SECONDS 600   // 10 minutes, the WMO sustained-wind window
+#define WIND_WINDOW_SECONDS 600U  // 10 minutes, the WMO sustained-wind window
 #endif
-
-#define WIND_GUST_SECONDS 3       // WMO gust: highest rolling 3-second mean
-
-// Direction is variable when the resultant vector is shorter than this fraction, per mille, of what the
-// same pulses would make all pointing one way. 637 is 2/pi: headings spread evenly over half the compass,
-// METAR's threshold for a variable direction at any speed.
-#define WIND_VARIABLE_RESULTANT_PER_MILLE 637
 
 class WindSensor {
 public:
@@ -46,11 +39,13 @@ public:
 
   struct Direction {
     // False until the window is full, in a calm, when there is no valid heading in the window, or when
-    // the vectors cancel exactly. When false, `variable` is false and `angle` is 0.
+    // the vectors cancel exactly.
     bool valid = false;
-    // The headings are spread too widely for their mean to say much (see WIND_VARIABLE_RESULTANT_PER_MILLE).
-    bool variable = false;
     uint16_t angle = 0;   // speed-weighted vector mean of the vane headings
+    // Standard deviation of the headings by the Yamartino method, from unit vectors (every second with a
+    // valid heading counts the same, whatever its speed). Reported in a calm too, but 0 until the window is
+    // full or when there is no valid heading in it.
+    uint16_t stddev = 0;
   };
 
   Direction direction() const;
@@ -62,11 +57,12 @@ private:
 
   // Running sums over the window, so each second's update is O(1).
   uint32_t _pulse_sum = 0;
-  uint32_t _heading_pulse_sum = 0;   // pulses in the seconds with a valid heading
-  int32_t _weighted_sin = 0, _weighted_cos = 0;
+  int64_t _weighted_sin = 0, _weighted_cos = 0;   // up to 600 s x 255 pulses x 32767, past int32_t
+  uint16_t _heading_count = 0;       // seconds with a valid heading
+  int32_t _unit_sin = 0, _unit_cos = 0;
 
   void addToSums(const WindSample& sample) { changeSums(sample, 1); }
   void removeFromSums(const WindSample& sample) { changeSums(sample, -1); }
   void changeSums(const WindSample& sample, int8_t sign);
-  bool variable() const;
+  uint16_t stddev() const;
 };

@@ -20,8 +20,8 @@ static void test_empty_window() {
   TEST_ASSERT_EQUAL_UINT16(0, w.averageSpeed());
   TEST_ASSERT_EQUAL_UINT16(0, w.gustSpeed());
   TEST_ASSERT_FALSE(w.direction().valid);
-  TEST_ASSERT_FALSE(w.direction().variable);
   TEST_ASSERT_EQUAL_UINT16(0, w.direction().angle);
+  TEST_ASSERT_EQUAL_UINT16(0, w.direction().stddev);
 }
 
 static void test_nothing_until_the_window_is_full() {
@@ -84,6 +84,37 @@ static void test_gust_across_ring_wraparound() {
   TEST_ASSERT_EQUAL_UINT16(1000, w.gustSpeed());
 }
 
+// Wherever the ring's seam falls, a burst at either end of the window counts, and the newest second
+// isn't summed with the oldest two.
+static void test_gust_at_every_seam_position() {
+  const uint16_t extras[] = {0, 1, 2, 3, 4, 300, WIND_WINDOW_SECONDS - 3, WIND_WINDOW_SECONDS - 2,
+                             WIND_WINDOW_SECONDS - 1};
+  for (uint16_t extra : extras) {
+    // Newest three seconds.
+    WindSensor newest;
+    for (uint16_t i = 0; i < WIND_WINDOW_SECONDS + extra; i++) {
+      newest.addSample({uint8_t(i >= WIND_WINDOW_SECONDS + extra - 3 ? 30 : 3), NORTH});
+    }
+    TEST_ASSERT_EQUAL_UINT16(2000, newest.gustSpeed());
+
+    // Oldest three seconds.
+    WindSensor oldest;
+    for (uint16_t i = 0; i < WIND_WINDOW_SECONDS + extra; i++) {
+      oldest.addSample({uint8_t(i >= extra && i < extra + 3 ? 30 : 3), NORTH});
+    }
+    TEST_ASSERT_EQUAL_UINT16(2000, oldest.gustSpeed());
+
+    // The newest second and the oldest two are strong. Summed across the seam they'd read 2000, but the
+    // real gust is the oldest two and the one after: 30 + 30 + 3 over 3 s.
+    WindSensor seam;
+    for (uint16_t i = 0; i < WIND_WINDOW_SECONDS + extra; i++) {
+      bool strong = i == WIND_WINDOW_SECONDS + extra - 1 || i == extra || i == extra + 1;
+      seam.addSample({uint8_t(strong ? 30 : 3), NORTH});
+    }
+    TEST_ASSERT_EQUAL_UINT16(1400, seam.gustSpeed());
+  }
+}
+
 static void test_direction_is_speed_weighted() {
   WindSensor w;
   // Strong wind from the east, a brief light spell from the west.
@@ -106,47 +137,59 @@ static void test_direction_west_of_north_wraps_high() {
   WindSensor w;
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, NNW});
   TEST_ASSERT_TRUE(w.direction().valid);
-  // 337.5 degrees. The x1000 sin/cos table puts off-axis headings a few counts (hundredths of a degree) off.
-  TEST_ASSERT_UINT16_WITHIN(8, 0xF000, w.direction().angle);
+  TEST_ASSERT_EQUAL_UINT16(0xF000, w.direction().angle);   // 337.5 degrees
 }
 
-static void test_steady_direction_is_not_variable() {
+static void test_steady_direction_has_no_spread() {
   WindSensor w;
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, EAST});
-  TEST_ASSERT_FALSE(w.direction().variable);
+  TEST_ASSERT_EQUAL_UINT16(0, w.direction().stddev);
+
+  // Off the axes too, where table rounding would leave a floor with a coarser scale.
+  WindSensor ne;
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) ne.addSample({5, Heading::Northeast});
+  TEST_ASSERT_EQUAL_UINT16(0, ne.direction().stddev);
 }
 
-// North, east and south equally: the resultant is a third of the pulses' length, but still points east.
-static void test_wide_spread_is_variable() {
+// NNW and NNE equally: 22.5 degrees either side of north. Yamartino reads a touch high, about 22.7 degrees.
+static void test_stddev_of_two_neighbours() {
+  WindSensor w;
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, i % 2 ? NNE : NNW});
+  TEST_ASSERT_EQUAL_UINT16(4131, w.direction().stddev);
+}
+
+// North, east and south equally: the mean still points east, about 79.7 degrees either way.
+static void test_stddev_of_a_wide_spread() {
   WindSensor w;
   const Heading headings[] = {NORTH, EAST, SOUTH};
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, headings[i % 3]});
   TEST_ASSERT_TRUE(w.direction().valid);
   TEST_ASSERT_EQUAL_UINT16(0x4000, w.direction().angle);
-  TEST_ASSERT_TRUE(w.direction().variable);
+  TEST_ASSERT_EQUAL_UINT16(14504, w.direction().stddev);
 }
 
-// The threshold is an even spread over half the compass. The nine points from west through north to east
-// (180 degrees) are variable; the seven from WNW to ENE (135 degrees) are not.
-static void test_variable_threshold_is_half_the_compass() {
-  WindSensor half;
-  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) {
-    half.addSample({5, Heading((12 + i % 9) % HEADING_COUNT)});   // W through N to E
-  }
-  TEST_ASSERT_TRUE(half.direction().variable);
-
-  WindSensor narrower;
-  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) {
-    narrower.addSample({5, Heading((13 + i % 7) % HEADING_COUNT)});   // WNW through N to ENE
-  }
-  TEST_ASSERT_FALSE(narrower.direction().variable);
+// The mean is speed-weighted but the spread isn't. Strong east and light west for equal times point east,
+// and the unit vectors cancel, which is Yamartino's maximum of about 104 degrees.
+static void test_stddev_is_not_speed_weighted() {
+  WindSensor w;
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({uint8_t(i % 2 ? 10 : 1), i % 2 ? EAST : WEST});
+  TEST_ASSERT_EQUAL_UINT16(0x4000, w.direction().angle);
+  TEST_ASSERT_EQUAL_UINT16(18919, w.direction().stddev);
 }
 
-// Seconds without a heading don't count towards the threshold, so a mostly faulty vane can still be steady.
-static void test_variable_ignores_invalid_headings() {
+// Seconds without a heading don't count, so a mostly faulty vane can still be steady.
+static void test_stddev_ignores_invalid_headings() {
   WindSensor w;
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, i % 10 == 0 ? EAST : OPEN});
-  TEST_ASSERT_FALSE(w.direction().variable);
+  TEST_ASSERT_EQUAL_UINT16(0, w.direction().stddev);
+}
+
+// The spread forgets old seconds along with the mean.
+static void test_stddev_forgets_evicted_samples() {
+  WindSensor w;
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, i % 2 ? EAST : WEST});
+  for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, NORTH});
+  TEST_ASSERT_EQUAL_UINT16(0, w.direction().stddev);
 }
 
 static void test_no_direction_in_calm() {
@@ -159,6 +202,8 @@ static void test_invalid_vane_samples_are_ignored() {
   WindSensor w;
   for (int i = 0; i < WIND_WINDOW_SECONDS; i++) w.addSample({5, OPEN});
   TEST_ASSERT_FALSE(w.direction().valid);
+  TEST_ASSERT_EQUAL_UINT16(0, w.direction().angle);
+  TEST_ASSERT_EQUAL_UINT16(0, w.direction().stddev);
   TEST_ASSERT_EQUAL_UINT16(333, w.averageSpeed());   // speed still counts
 
   w.addSample({5, WEST});
@@ -183,13 +228,16 @@ int main() {
   RUN_TEST(test_gust_is_highest_rolling_three_second_mean);
   RUN_TEST(test_gust_expires_with_the_window);
   RUN_TEST(test_gust_across_ring_wraparound);
+  RUN_TEST(test_gust_at_every_seam_position);
   RUN_TEST(test_direction_is_speed_weighted);
   RUN_TEST(test_direction_averages_across_north);
   RUN_TEST(test_direction_west_of_north_wraps_high);
-  RUN_TEST(test_steady_direction_is_not_variable);
-  RUN_TEST(test_wide_spread_is_variable);
-  RUN_TEST(test_variable_threshold_is_half_the_compass);
-  RUN_TEST(test_variable_ignores_invalid_headings);
+  RUN_TEST(test_steady_direction_has_no_spread);
+  RUN_TEST(test_stddev_of_two_neighbours);
+  RUN_TEST(test_stddev_of_a_wide_spread);
+  RUN_TEST(test_stddev_is_not_speed_weighted);
+  RUN_TEST(test_stddev_ignores_invalid_headings);
+  RUN_TEST(test_stddev_forgets_evicted_samples);
   RUN_TEST(test_no_direction_in_calm);
   RUN_TEST(test_invalid_vane_samples_are_ignored);
   RUN_TEST(test_direction_forgets_evicted_samples);
