@@ -15,7 +15,7 @@ A solar-powered wind and rain station that reports over a LoRa mesh (MeshCore) t
   - Rain: total over the last 60 complete minutes.
 
 Since upstream MeshCore doesn't support wind data, I had to create forks to get it from the radio to Home Assistant:
-- [MeshCore firmware](https://github.com/Blake-Latchford/MeshCore-wind/tree/feature/wind-i2c): reads the board over I2C and sends LPP telemetry.
+- [MeshCore firmware](https://github.com/Blake-Latchford/MeshCore/tree/feature/wind-i2c): reads the board over I2C and sends LPP telemetry.
 - [meshcore-ha](https://github.com/Blake-Latchford/meshcore-ha/tree/feature/wind-telemetry-lpp-types): shows the wind and rain telemetry as Home Assistant sensors.
 - [meshcore_py](https://github.com/Blake-Latchford/meshcore_py/tree/feature/wind-telemetry-lpp-types): names the wind and rain LPP types.
 - [pycayennelpp](https://github.com/Blake-Latchford/pycayennelpp/tree/feature/wind-telemetry-lpp-types): decodes the wind and rain LPP types.
@@ -111,5 +111,5 @@ pio run -e promicro -t upload   # build and flash (double-tap reset first, see B
 - A single read of the whole map provides a consistent snapshot.
 - The register pointer starts at `0x00` and returns there after every read.
 - To start part way through the map, write the register offset, then read.
-- The board [defaults](src/IICServer.cpp) defaults to address 0x6C; bridge D5–D6 for 0x6E
+- The board [defaults](src/IICServer.cpp) to address 0x6C; bridge D5–D6 for 0x6E
 - This firmware only supports a 100kHz I2C bus, which is the maximum the 2MHz clock can support.
